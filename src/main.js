@@ -1,6 +1,7 @@
 import cloudbase from "@cloudbase/js-sdk";
 import "./style.css";
 import { normalize, rankMembers, searchableText } from "./matching.js";
+import { normalizeEvmAddress, parseOnchainProof, shortAddress } from "./web3.js";
 
 const ENV_ID = "seedclub-talent-a-d7d88i40a622d9";
 const ADMIN_UID = "2094762302839332865";
@@ -42,7 +43,7 @@ const messages = {
     loginRegister: "登录 / 注册",
     logout: "退出登录",
     heroTitle: "创建你的 Seed Club 资料卡，让社区认识你",
-    heroSubtitle: "完善资料后，你可以被其他成员通过 AI、技能、职业和地区搜索到。",
+    heroSubtitle: "完善资料并公开钱包后，其他成员可以通过技能、职业和可用的链上证据找到你。",
     heroCta: "创建我的资料卡",
     heroEditCta: "编辑我的资料卡",
     heroBrowse: "浏览社区成员",
@@ -54,7 +55,7 @@ const messages = {
     newcomerView: "查看资料",
     discoverLabel: "DISCOVER MEMBERS",
     discoverTitle: "寻找可以一起做事的人",
-    discoverIntro: "使用 AI 描述需求，或按姓名、技能、职业和地区搜索。",
+    discoverIntro: "使用 AI 描述需求，结合成员资料和可用的 The Graph 链上证据进行搜索。",
     aiSearchLabel: "用自然语言描述要找的人",
     aiPlaceholder: "例如：帮我找一个既懂 AI Agent，又有交易经验的人",
     aiQuota: "同一网络每天可使用 10 次 AI 搜索",
@@ -62,7 +63,7 @@ const messages = {
     aiSearch: "AI 帮我找",
     aiSearching: "正在查找…",
     aiExamplesAria: "AI 搜索示例",
-    aiTradeQuery: "找一个既懂 AI Agent，又有交易经验的人",
+    aiTradeQuery: "找一个懂 DeFi，并且在 Uniswap V3 有实际交易记录的人",
     aiSecurityQuery: "谁研究 Agent Security？",
     aiXianQuery: "我想找人在西安、可以聊 Web3 的成员",
     keywordDivider: "或者使用关键词精准搜索",
@@ -289,6 +290,9 @@ const messages = {
     occupationMatch: "职业方向匹配 {value}",
     experienceMatch: "经历中包含 {value}",
     keywordMatch: "资料中提到 {value}",
+    onchainEvidence: "The Graph 证据：已读取 {value} 条链上活动",
+    protocolEvidence: "协议活动匹配 {value}",
+    activityEvidence: "链上活动匹配 {value}",
     fieldName: "昵称",
     fieldNamePlaceholder: "例如：Leo",
     fieldNickname: "昵称",
@@ -306,6 +310,32 @@ const messages = {
     fieldWechat: "微信",
     fieldWechatPlaceholder: "微信号",
     fieldEmail: "邮箱",
+    fieldWallet: "EVM 钱包",
+    fieldWalletPlaceholder: "0x 开头的钱包地址",
+    walletSectionTitle: "链上身份",
+    walletSectionIntro: "连接或填写你愿意公开的钱包。钱包活动只会在你主动刷新后通过 The Graph 查询。",
+    connectWallet: "连接浏览器钱包",
+    walletConnecting: "正在连接钱包...",
+    walletConnected: "钱包已填入，发布资料后才会公开。",
+    walletUnavailable: "没有检测到浏览器钱包，你仍然可以手动填写地址。",
+    errorInvalidWallet: "钱包地址格式不正确，请填写 0x 开头的 42 位 EVM 地址。",
+    onchainProofTitle: "链上活动证据",
+    onchainProofSignals: "已读取 {count} 条活动记录",
+    onchainProofPending: "钱包已公开，链上证据尚未刷新。",
+    onchainProofEmpty: "当前 Subgraph 没有找到该钱包的相关活动。",
+    onchainProofRefresh: "刷新链上证据",
+    onchainProofRefreshing: "正在查询 The Graph...",
+    onchainProofUpdated: "链上证据已通过 The Graph 更新。",
+    onchainProofDisclaimer: "公开钱包不等于现实身份认证，也不代表信誉或投资能力。",
+    onchainProofSource: "来源：{protocol} · {network} · 区块 {block}",
+    onchainProofNoBlock: "来源：{protocol} · {network}",
+    onchainProofUpdatedAt: "查询时间：{time}",
+    evidenceSwap: "交易",
+    evidenceLiquidityAdded: "添加流动性",
+    evidenceLiquidityRemoved: "移除流动性",
+    evidenceFeesCollected: "领取费用",
+    errorGraphNotConfigured: "The Graph API Key 尚未配置，代码已就绪，配置后即可读取真实数据。",
+    errorWalletNotLinked: "请先保存钱包地址，再刷新链上证据。",
   },
   en: {
     homeAria: "Seed Club Talent home",
@@ -326,7 +356,7 @@ const messages = {
     loginRegister: "Log in / Sign up",
     logout: "Log out",
     heroTitle: "Create your Seed Club profile and let the community discover you",
-    heroSubtitle: "Complete your profile so other members can find you through AI, skills, roles, and locations.",
+    heroSubtitle: "Complete your profile and optionally publish a wallet so members can find you through skills, roles, and available onchain evidence.",
     heroCta: "Create my profile",
     heroEditCta: "Edit my profile",
     heroBrowse: "Browse community members",
@@ -338,7 +368,7 @@ const messages = {
     newcomerView: "View profile",
     discoverLabel: "DISCOVER MEMBERS",
     discoverTitle: "Find people to build with",
-    discoverIntro: "Describe who you need with AI, or search by name, skill, role, and location.",
+    discoverIntro: "Describe who you need and search across member profiles and available onchain evidence from The Graph.",
     aiSearchLabel: "Describe the person you are looking for",
     aiPlaceholder: "Example: Find someone who knows AI agents and has trading experience",
     aiQuota: "10 AI searches per network each day",
@@ -346,7 +376,7 @@ const messages = {
     aiSearch: "Find with AI",
     aiSearching: "Searching…",
     aiExamplesAria: "AI search examples",
-    aiTradeQuery: "Find someone who knows AI agents and has trading experience",
+    aiTradeQuery: "Find a DeFi builder with observed Uniswap V3 swap activity",
     aiSecurityQuery: "Who works on Agent Security?",
     aiXianQuery: "Find a Web3 member in Xi'an",
     keywordDivider: "or search with exact keywords",
@@ -573,6 +603,9 @@ const messages = {
     occupationMatch: "Role matches {value}",
     experienceMatch: "Experience includes {value}",
     keywordMatch: "Profile mentions {value}",
+    onchainEvidence: "The Graph evidence: {value} onchain activities observed",
+    protocolEvidence: "Protocol activity matches {value}",
+    activityEvidence: "Onchain activity matches {value}",
     fieldName: "Nickname",
     fieldNamePlaceholder: "Example: Leo",
     fieldNickname: "Nickname",
@@ -590,6 +623,32 @@ const messages = {
     fieldWechat: "WeChat",
     fieldWechatPlaceholder: "WeChat ID",
     fieldEmail: "Email",
+    fieldWallet: "EVM wallet",
+    fieldWalletPlaceholder: "Wallet address starting with 0x",
+    walletSectionTitle: "Onchain identity",
+    walletSectionIntro: "Connect or enter the wallet you choose to make public. Activity is queried through The Graph only when you refresh it.",
+    connectWallet: "Connect browser wallet",
+    walletConnecting: "Connecting wallet...",
+    walletConnected: "Wallet added. It becomes public only after you publish the profile.",
+    walletUnavailable: "No browser wallet was detected. You can still enter an address manually.",
+    errorInvalidWallet: "Enter a valid 42-character EVM address starting with 0x.",
+    onchainProofTitle: "Onchain activity proof",
+    onchainProofSignals: "{count} activity records observed",
+    onchainProofPending: "The wallet is public, but its onchain evidence has not been refreshed yet.",
+    onchainProofEmpty: "The configured Subgraph found no related activity for this wallet.",
+    onchainProofRefresh: "Refresh onchain proof",
+    onchainProofRefreshing: "Querying The Graph...",
+    onchainProofUpdated: "Onchain evidence updated through The Graph.",
+    onchainProofDisclaimer: "A public wallet is not a legal identity check and does not imply reputation or investment ability.",
+    onchainProofSource: "Source: {protocol} · {network} · block {block}",
+    onchainProofNoBlock: "Source: {protocol} · {network}",
+    onchainProofUpdatedAt: "Queried: {time}",
+    evidenceSwap: "Swaps",
+    evidenceLiquidityAdded: "Liquidity added",
+    evidenceLiquidityRemoved: "Liquidity removed",
+    evidenceFeesCollected: "Fees collected",
+    errorGraphNotConfigured: "The Graph API key is not configured yet. The live query is ready once the key is added.",
+    errorWalletNotLinked: "Save a wallet address before refreshing onchain evidence.",
   },
 };
 
@@ -680,6 +739,8 @@ const state = {
   pendingProfileDraft: readProfileDraft(),
   awaitingProfileAuth: false,
   aiProfileGenerating: false,
+  walletConnecting: false,
+  refreshingProofIds: new Set(),
 };
 
 const essentialFields = [
@@ -698,7 +759,8 @@ const optionalFields = [
   { key: "email", labelKey: "fieldEmail", type: "email", placeholder: "name@example.com" },
 ];
 
-const fields = [...essentialFields, ...optionalFields];
+const walletField = { key: "wallet_address", labelKey: "fieldWallet", placeholderKey: "fieldWalletPlaceholder" };
+const fields = [...essentialFields, walletField, ...optionalFields];
 
 document.querySelector("#app").innerHTML = `
   <header class="topbar">
@@ -727,7 +789,7 @@ document.querySelector("#app").innerHTML = `
     <section class="hero hero-profile" aria-labelledby="pageTitle">
       <div class="eyebrow">SEED CLUB · MEMBER DIRECTORY</div>
       <h1 id="pageTitle" data-i18n="heroTitle">创建你的 Seed Club 资料卡，让社区认识你</h1>
-      <p data-i18n="heroSubtitle">完善资料后，你可以被其他成员通过 AI、技能、职业和地区搜索到。</p>
+      <p data-i18n="heroSubtitle">完善资料并公开钱包后，其他成员可以通过技能、职业和可用的链上证据找到你。</p>
       <div class="hero-actions">
         <button id="heroProfileBtn" class="button button-primary hero-primary-action" type="button" data-i18n="heroCta">创建我的资料卡</button>
         <a class="button button-quiet hero-secondary-action" href="#memberDiscovery" data-i18n="heroBrowse">浏览社区成员</a>
@@ -750,7 +812,7 @@ document.querySelector("#app").innerHTML = `
       <div class="discovery-heading">
         <p class="section-label" data-i18n="discoverLabel">DISCOVER MEMBERS</p>
         <h2 id="discoveryTitle" data-i18n="discoverTitle">寻找可以一起做事的人</h2>
-        <p data-i18n="discoverIntro">使用 AI 描述需求，或按姓名、技能、职业和地区搜索。</p>
+        <p data-i18n="discoverIntro">使用 AI 描述需求，结合成员资料和可用的 The Graph 链上证据进行搜索。</p>
       </div>
       <form id="aiSearchForm" class="ai-search-box">
         <label class="sr-only" for="aiSearchInput" data-i18n="aiSearchLabel">用自然语言描述要找的人</label>
@@ -761,7 +823,7 @@ document.querySelector("#app").innerHTML = `
         </div>
       </form>
       <div class="ai-suggestions" aria-label="AI 搜索示例" data-i18n-aria-label="aiExamplesAria">
-        <button type="button" data-ai-search="找一个既懂 AI Agent，又有交易经验的人" data-i18n-query="aiTradeQuery">AI Agent + 交易</button>
+        <button type="button" data-ai-search="找一个懂 DeFi，并且在 Uniswap V3 有实际交易记录的人" data-i18n-query="aiTradeQuery">DeFi + 链上证据</button>
         <button type="button" data-ai-search="谁研究 Agent Security？" data-i18n-query="aiSecurityQuery">Agent Security</button>
         <button type="button" data-ai-search="我想找人在西安、可以聊 Web3 的成员" data-i18n-query="aiXianQuery">西安 + Web3</button>
       </div>
@@ -1148,16 +1210,63 @@ elements.memberFields.innerHTML = `
     <h3 data-i18n="coreFieldsTitle">1 分钟资料卡</h3>
     <div class="form-grid">${essentialFields.map(renderFieldControl).join("")}</div>
   </section>
+  <section class="profile-field-section profile-wallet-section">
+    <div class="profile-wallet-heading">
+      <div>
+        <h3 data-i18n="walletSectionTitle">链上身份</h3>
+        <p data-i18n="walletSectionIntro">连接或填写你愿意公开的钱包。钱包活动只会在你主动刷新后通过 The Graph 查询。</p>
+      </div>
+      <button id="connectWalletBtn" class="button button-quiet button-small" type="button" data-i18n="connectWallet">连接浏览器钱包</button>
+    </div>
+    <div class="form-grid wallet-form-grid">${renderFieldControl(walletField)}</div>
+    <p id="walletStatus" class="wallet-status" role="status" aria-live="polite"></p>
+  </section>
   <details class="optional-profile-fields">
     <summary><span data-i18n="optionalFieldsTitle">补充更多资料（选填）</span><small data-i18n="optionalFieldsHint">地区、经历和联系方式可以稍后再填</small></summary>
     <div class="form-grid">${optionalFields.map(renderFieldControl).join("")}</div>
   </details>`;
+
+elements.connectWalletBtn = document.querySelector("#connectWalletBtn");
+elements.walletAddressInput = document.querySelector("#field-wallet_address");
+elements.walletStatus = document.querySelector("#walletStatus");
 
 function updateEditorUi() {
   elements.editorTitle.textContent = state.editorMode === "add"
     ? (state.isAdmin ? t("editorAddAdmin") : t("editorAddSelf"))
     : t("editorEdit");
   elements.saveMemberBtn.textContent = state.editorMode === "add" ? t("saveMember") : t("saveChanges");
+}
+
+async function connectWallet() {
+  if (state.walletConnecting) return;
+  elements.walletStatus.className = "wallet-status";
+  if (!window.ethereum?.request) {
+    elements.walletStatus.textContent = t("walletUnavailable");
+    elements.walletStatus.classList.add("error");
+    elements.walletAddressInput.focus();
+    return;
+  }
+
+  state.walletConnecting = true;
+  elements.connectWalletBtn.disabled = true;
+  elements.connectWalletBtn.textContent = t("walletConnecting");
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const address = normalizeEvmAddress(accounts?.[0]);
+    if (!address) throw new Error(t("errorInvalidWallet"));
+    elements.walletAddressInput.value = address;
+    state.editorDirty = true;
+    elements.walletStatus.textContent = t("walletConnected");
+    elements.walletStatus.classList.add("success");
+  } catch (error) {
+    console.error("wallet connection failed", error);
+    elements.walletStatus.textContent = error?.code === 4001 ? t("errorGeneric") : friendlyError(error, t("errorInvalidWallet"));
+    elements.walletStatus.classList.add("error");
+  } finally {
+    state.walletConnecting = false;
+    elements.connectWalletBtn.disabled = false;
+    elements.connectWalletBtn.textContent = t("connectWallet");
+  }
 }
 
 function validateRegisterUsername() {
@@ -1452,6 +1561,52 @@ function canEditMember(member) {
   return state.isAdmin || (state.isMember && String(member.owner_id || "") === state.currentUid);
 }
 
+function renderOnchainProof(member, canEdit) {
+  const walletAddress = normalizeEvmAddress(member.wallet_address);
+  if (!walletAddress) return "";
+  const proof = parseOnchainProof(member.onchain_proof);
+  const refreshing = state.refreshingProofIds.has(String(member.id));
+  const evidenceLabels = {
+    swap: "evidenceSwap",
+    "liquidity-added": "evidenceLiquidityAdded",
+    "liquidity-removed": "evidenceLiquidityRemoved",
+    "fees-collected": "evidenceFeesCollected",
+  };
+  const evidence = proof?.evidence?.length
+    ? `<div class="onchain-evidence-list">${proof.evidence.map((item) => `
+        <span><strong>${item.count}</strong>${escapeHtml(t(evidenceLabels[item.type] || item.type))}</span>
+      `).join("")}</div>`
+    : "";
+  const source = proof?.source
+    ? t(proof.source.indexedBlock ? "onchainProofSource" : "onchainProofNoBlock", {
+      protocol: proof.source.protocol || "Subgraph",
+      network: proof.source.network || "EVM",
+      block: proof.source.indexedBlock || "",
+    })
+    : "";
+  const status = proof
+    ? (proof.totalEvents > 0 ? t("onchainProofSignals", { count: proof.totalEvents }) : t("onchainProofEmpty"))
+    : t("onchainProofPending");
+  const walletUrl = `https://etherscan.io/address/${encodeURIComponent(walletAddress)}`;
+
+  return `
+    <section class="onchain-proof" aria-label="${t("onchainProofTitle")}">
+      <div class="onchain-proof-heading">
+        <div>
+          <p>${t("onchainProofTitle")}</p>
+          <a href="${walletUrl}" target="_blank" rel="noopener noreferrer">${shortAddress(walletAddress)}</a>
+        </div>
+        <span class="graph-badge">THE GRAPH</span>
+      </div>
+      <strong class="onchain-proof-status">${escapeHtml(status)}</strong>
+      ${evidence}
+      ${source ? `<p class="onchain-proof-meta">${escapeHtml(source)}</p>` : ""}
+      ${proof?.queriedAt ? `<p class="onchain-proof-meta">${escapeHtml(t("onchainProofUpdatedAt", { time: formatMessageTime(proof.queriedAt) }))}</p>` : ""}
+      <p class="onchain-proof-disclaimer">${t("onchainProofDisclaimer")}</p>
+      ${canEdit ? `<button class="text-button refresh-onchain" type="button" data-id="${escapeHtml(member.id)}" ${refreshing ? "disabled" : ""}>${refreshing ? t("onchainProofRefreshing") : t("onchainProofRefresh")}</button>` : ""}
+    </section>`;
+}
+
 function renderMember(member) {
   const skills = Array.isArray(member.skills) ? member.skills : [];
   const aiSkills = Array.isArray(member.ai_skills) ? member.ai_skills : [];
@@ -1488,6 +1643,7 @@ function renderMember(member) {
         </div>` : ""}
       ${member.experience ? `<p class="experience">${escapeHtml(member.experience)}</p>` : ""}
       ${member.intro ? `<p class="intro">${escapeHtml(member.intro)}</p>` : ""}
+      ${renderOnchainProof(member, canEdit)}
       ${contacts.length ? `
         <dl class="contacts">
           ${contacts.map(([type, label, value]) => `<div><dt>${label}</dt><dd>${contactLink(type, value)}</dd></div>`).join("")}
@@ -1587,6 +1743,9 @@ function render() {
   });
   document.querySelectorAll(".delete-member").forEach((button) => {
     button.addEventListener("click", () => openDelete(button.dataset.id));
+  });
+  document.querySelectorAll(".refresh-onchain").forEach((button) => {
+    button.addEventListener("click", () => refreshOnchainProof(button.dataset.id));
   });
 }
 
@@ -2049,6 +2208,9 @@ function friendlyError(error, fallback = t("errorGeneric")) {
   if (/network|fetch|timeout|Failed to fetch/i.test(message)) return t("errorNetwork");
   if (/DAILY_LIMIT_REACHED/i.test(`${code} ${message}`)) return t("errorLimit");
   if (/DEEPSEEK_NOT_CONFIGURED/i.test(`${code} ${message}`)) return t("errorDeepSeek");
+  if (/GRAPH_NOT_CONFIGURED/i.test(`${code} ${message}`)) return t("errorGraphNotConfigured");
+  if (/WALLET_NOT_LINKED/i.test(`${code} ${message}`)) return t("errorWalletNotLinked");
+  if (/INVALID_WALLET_ADDRESS/i.test(`${code} ${message}`)) return t("errorInvalidWallet");
   return state.locale === "en" ? fallback : (message || fallback);
 }
 
@@ -2171,6 +2333,8 @@ function openEditor(mode, id = null, draft = null) {
   elements.memberError.textContent = "";
   elements.profileAiInput.value = "";
   elements.profileAiStatus.textContent = "";
+  elements.walletStatus.textContent = "";
+  elements.walletStatus.className = "wallet-status";
   updateEditorUi();
 
   if (mode === "edit") {
@@ -2305,6 +2469,39 @@ async function requestSkillNormalization(profile) {
     ai_search_terms: normalizedStringList([...aiSkills, ...aiSearchTerms], 36),
     ai_skills_updated_at: new Date().toISOString(),
   };
+}
+
+async function refreshOnchainProof(id) {
+  const member = findMember(id);
+  if (!member || !canEditMember(member) || state.refreshingProofIds.has(String(id))) return;
+  if (!normalizeEvmAddress(member.wallet_address)) {
+    showToast(t("errorWalletNotLinked"), "error");
+    return;
+  }
+
+  state.refreshingProofIds.add(String(id));
+  render();
+  try {
+    const response = await app.callFunction({
+      name: "seedclub-ai-search",
+      data: { action: "refresh_onchain_proof", memberId: String(id) },
+    });
+    let result = response?.result ?? response;
+    if (typeof result === "string") result = JSON.parse(result);
+    if (!result?.success) {
+      const error = new Error(result?.message || result?.code || "ONCHAIN_PROOF_FAILED");
+      error.code = result?.code;
+      throw error;
+    }
+    await loadMembers();
+    showToast(t("onchainProofUpdated"));
+  } catch (error) {
+    console.error("onchain proof refresh failed", error);
+    showToast(friendlyError(error), "error");
+  } finally {
+    state.refreshingProofIds.delete(String(id));
+    render();
+  }
 }
 
 async function normalizeLegacySkills() {
@@ -2504,6 +2701,15 @@ async function saveMember(event) {
     elements.memberError.textContent = t("errorRequiredFields");
     return;
   }
+  if (payload.wallet_address) {
+    const walletAddress = normalizeEvmAddress(payload.wallet_address);
+    if (!walletAddress) {
+      elements.memberError.textContent = t("errorInvalidWallet");
+      elements.walletAddressInput.focus();
+      return;
+    }
+    payload.wallet_address = walletAddress;
+  }
 
   if (!state.isAdmin && !state.isMember) {
     storeProfileDraft(payload);
@@ -2518,6 +2724,15 @@ async function saveMember(event) {
   elements.saveMemberBtn.disabled = true;
   elements.saveMemberBtn.textContent = t("saving");
   try {
+    const existingMember = state.editorMode === "edit" ? findMember(state.editingId) : null;
+    if (payload.wallet_address !== (existingMember?.wallet_address || null)) {
+      payload.wallet_connected_at = payload.wallet_address ? new Date().toISOString() : null;
+      payload.onchain_proof = null;
+      payload.onchain_proof_updated_at = null;
+    } else if (state.editorMode === "add" && payload.wallet_address) {
+      payload.wallet_connected_at = new Date().toISOString();
+    }
+
     let usedLocalSkillFallback = false;
     elements.saveMemberBtn.textContent = t("aiPreparingSkills");
     try {
@@ -2721,6 +2936,7 @@ elements.messageInput.addEventListener("keydown", (event) => {
 });
 elements.memberForm.addEventListener("submit", saveMember);
 elements.profileAiGenerateBtn.addEventListener("click", generateProfileFromIntroduction);
+elements.connectWalletBtn.addEventListener("click", connectWallet);
 elements.memberForm.addEventListener("input", () => {
   state.editorDirty = true;
 });

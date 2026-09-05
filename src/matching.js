@@ -3,6 +3,7 @@ export function normalize(value) {
 }
 
 export function searchableText(member) {
+  const proof = onchainProof(member);
   return normalize([
     member.name,
     member.nickname,
@@ -17,7 +18,24 @@ export function searchableText(member) {
     member.wechat,
     member.telegram,
     member.email,
+    member.wallet_address,
+    proof?.source?.protocol,
+    proof?.source?.network,
+    ...(Array.isArray(proof?.evidence) ? proof.evidence.map((item) => item?.type) : []),
   ].filter(Boolean).join(" "));
+}
+
+function onchainProof(member) {
+  const value = member?.onchain_proof;
+  if (!value) return null;
+  if (typeof value === "object" && !Array.isArray(value)) return value;
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 function listify(value) {
@@ -39,6 +57,9 @@ export function rankMembers(members, intent, originalQuery) {
   const occupations = listify(intent?.occupations || intent?.occupation);
   const experienceKeywords = listify(intent?.experience_keywords);
   const freeKeywords = listify(intent?.keywords);
+  const onchainProtocols = listify(intent?.onchain_protocols);
+  const onchainActivities = listify(intent?.onchain_activities);
+  const requiresOnchainEvidence = Boolean(intent?.requires_onchain_evidence);
   const fallbackTerms = normalize(originalQuery)
     .split(/[\s，,、；;。！？!?]+/)
     .filter((term) => term.length > 1);
@@ -48,7 +69,10 @@ export function rankMembers(members, intent, originalQuery) {
     || locations.length
     || occupations.length
     || experienceKeywords.length
-    || freeKeywords.length,
+    || freeKeywords.length
+    || onchainProtocols.length
+    || onchainActivities.length
+    || requiresOnchainEvidence,
   );
 
   return members.map((member) => {
@@ -60,6 +84,9 @@ export function rankMembers(members, intent, originalQuery) {
       ...(Array.isArray(member.ai_search_terms) ? member.ai_search_terms : []),
     ];
     const profileText = searchableText(member);
+    const proof = onchainProof(member);
+    const evidence = Array.isArray(proof?.evidence) ? proof.evidence : [];
+    const totalEvents = Math.max(0, Number(proof?.totalEvents) || 0);
     const conditions = [];
 
     names.forEach((name) => {
@@ -130,6 +157,34 @@ export function rankMembers(members, intent, originalQuery) {
         if (!profileText.includes(normalize(keyword))) return false;
         score += 2;
         reasons.push({ key: "keywordMatch", value: keyword });
+        return true;
+      });
+    });
+
+    if (requiresOnchainEvidence) {
+      conditions.push(() => {
+        if (!proof || totalEvents < 1) return false;
+        score += Math.min(8, 3 + Math.log2(totalEvents + 1));
+        reasons.push({ key: "onchainEvidence", value: totalEvents });
+        return true;
+      });
+    }
+
+    onchainProtocols.forEach((protocol) => {
+      conditions.push(() => {
+        if (!includesLoose(proof?.source?.protocol, protocol)) return false;
+        score += 6;
+        reasons.push({ key: "protocolEvidence", value: proof.source.protocol });
+        return true;
+      });
+    });
+
+    onchainActivities.forEach((activity) => {
+      conditions.push(() => {
+        const matched = evidence.find((item) => includesLoose(item?.type, activity) && Number(item?.count) > 0);
+        if (!matched) return false;
+        score += 5;
+        reasons.push({ key: "activityEvidence", value: `${matched.type} (${matched.count})` });
         return true;
       });
     });

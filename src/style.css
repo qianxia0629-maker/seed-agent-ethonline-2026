@@ -442,6 +442,14 @@ footer span:first-child { color: #fff; font-weight: 760; }
 .profile-ai-actions p.error { color: var(--danger); }
 .profile-fields { display: grid; gap: 22px; }
 .profile-field-section > h3 { margin-bottom: 14px; font-size: 18px; }
+.profile-wallet-section { padding: 20px; border: 1px solid #cddbd2; border-radius: 14px; background: rgba(242, 247, 244, .72); }
+.profile-wallet-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 16px; }
+.profile-wallet-heading h3 { margin: 0 0 6px; font-size: 18px; }
+.profile-wallet-heading p { max-width: 560px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.wallet-form-grid { grid-template-columns: 1fr; }
+.wallet-status { min-height: 18px; margin: 9px 0 0; color: var(--muted); font-size: 12px; }
+.wallet-status.success { color: var(--green); }
+.wallet-status.error { color: var(--danger); }
 .optional-profile-fields { border: 1px solid var(--line); border-radius: 14px; background: rgba(247, 246, 242, .7); }
 .optional-profile-fields summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 17px 18px; color: var(--ink); cursor: pointer; font-size: 14px; font-weight: 750; }
 .optional-profile-fields summary small { color: var(--muted); font-size: 12px; font-weight: 500; }
@@ -463,6 +471,19 @@ footer span:first-child { color: #fff; font-weight: 760; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #3d7658; }
 .form-error { min-height: 20px; margin: 12px 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+.onchain-proof { margin-top: 20px; padding: 17px 18px; border-left: 3px solid var(--green); background: #f2f7f4; }
+.onchain-proof-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 13px; }
+.onchain-proof-heading p { margin: 0 0 4px; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.onchain-proof-heading a { color: var(--ink); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; font-weight: 700; }
+.graph-badge { flex: 0 0 auto; padding: 5px 8px; border: 1px solid #9fb5a8; color: var(--green); font-size: 10px; font-weight: 850; letter-spacing: .08em; }
+.onchain-proof-status { display: block; margin-bottom: 12px; font-size: 14px; line-height: 1.45; }
+.onchain-evidence-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.onchain-evidence-list span { display: inline-flex; align-items: baseline; gap: 5px; padding: 7px 9px; border: 1px solid #cfddd4; background: rgba(255, 255, 255, .72); color: #4f5b53; font-size: 11px; }
+.onchain-evidence-list strong { color: var(--ink); font-size: 15px; }
+.onchain-proof-meta, .onchain-proof-disclaimer { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.onchain-proof-disclaimer { margin-top: 10px; }
+.onchain-proof .refresh-onchain { margin-top: 11px; }
 .danger-label { color: var(--danger); }
 .auth-switch { display: block; margin: 18px auto 0; color: var(--green); font-size: 13px; }
 .verification-hint { margin: 0 0 18px; padding: 12px 14px; border-radius: 10px; color: var(--green); background: var(--green-soft); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
@@ -503,6 +524,8 @@ footer span:first-child { color: #fff; font-weight: 760; }
   .field-wide { grid-column: auto; }
   .profile-ai-actions { align-items: stretch; flex-direction: column; }
   .profile-ai-actions .button { width: 100%; }
+  .profile-wallet-heading { align-items: stretch; flex-direction: column; gap: 14px; }
+  .profile-wallet-heading .button { width: 100%; }
   .optional-profile-fields summary { align-items: flex-start; flex-direction: column; gap: 4px; }
   .message-board-section { padding: 56px 14px 70px; }
   .message-board-heading { align-items: flex-start; flex-direction: column; }

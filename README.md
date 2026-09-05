@@ -1,4 +1,45 @@
-# Seed Club Talent V5.12
+# Seed Club Talent V6: ETHOnline 2026
+
+Seed Club Talent is becoming a verifiable Web3 builder network. The ETHOnline branch adds wallet-linked profiles and live indexed activity evidence while preserving the existing community directory.
+
+## ETHOnline V6 第一阶段
+
+- 成员资料新增公开 EVM 钱包，可连接浏览器钱包或手动填写地址。
+- 钱包地址变更时会自动清除旧链上证据，避免证据与新地址错配。
+- 成员本人或管理员可以主动刷新 Onchain Activity Proof。
+- 云函数通过 The Graph Network Gateway 查询 Uniswap V3 Ethereum Subgraph 的实时索引数据。
+- 证据区显示交易、添加/移除流动性、领取费用、索引区块和查询时间。
+- 链上数据为空、API Key 未配置、超时或 GraphQL 查询失败都有独立状态，不返回模拟成功数据。
+- 钱包公开不被描述为身份认证、信用评分或投资能力证明。
+- AI 搜索可以识别用户明确提出的协议、活动类型和链上证据要求，并在真实成员资料与缓存的 The Graph 证据上确定性筛选。
+- 普通的 Web3 或 DeFi 技能搜索不会自动要求钱包证据，避免把没有公开钱包的合适成员错误排除。
+
+### The Graph 集成
+
+- Provider: The Graph Network Gateway
+- Subgraph: Uniswap V3 Ethereum
+- Default Subgraph ID: `5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV`
+- Server action: `refresh_onchain_proof`
+- Query module: `cloudfunctions/seedclub-ai-search/onchain-proof.js`
+- Credentials: server-side `GRAPH_API_KEY`; never expose it in the frontend or commit it to Git
+
+可选环境变量：
+
+- `GRAPH_UNISWAP_V3_SUBGRAPH_ID`: 覆盖默认 Subgraph ID。
+- `GRAPH_GATEWAY_URL`: 覆盖默认网关 `https://gateway.thegraph.com`。
+
+查询按每类最多 100 条近期事件汇总，因此页面称其为“已读取的活动记录”，不冒充钱包的完整历史总数。
+
+### V6 部署顺序
+
+1. 在 CloudBase PostgreSQL SQL 编辑器执行 `sql/v6-ethonline-wallet-and-proof.sql`。
+2. 在 Subgraph Studio 创建 API Key，并作为 `GRAPH_API_KEY` 写入 `seedclub-ai-search` 云函数环境变量。
+3. 更新并部署 `cloudfunctions/seedclub-ai-search` 云函数。
+4. 执行 `pnpm test` 与 `pnpm run build`。
+5. 部署前端 `dist`，登录成员账号，保存真实钱包并点击“刷新链上证据”。
+6. 核对页面显示的 Subgraph、索引区块、查询时间和钱包实际活动。
+
+比赛范围、赛前工作边界与 AI 使用披露分别见 `HACKATHON.md`、`PRE_EXISTING_WORK.md` 与 `AI_USAGE.md`。
 
 ## V5.12 更新
 

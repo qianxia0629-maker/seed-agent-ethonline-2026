@@ -1,6 +1,7 @@
 const cloudbase = require("@cloudbase/node-sdk");
 const crypto = require("node:crypto");
 const net = require("node:net");
+const { ACTIVITY_WINDOW_DAYS, DAY_SECONDS, buildOnchainProof } = require("./onchain-proof");
 
 const DAILY_LIMIT = 10;
 const PROFILE_DAILY_LIMIT = 20;
@@ -57,6 +58,8 @@ async function queryOnchainProfile(walletAddress) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
   try {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const cutoff = String(nowSeconds - (ACTIVITY_WINDOW_DAYS * DAY_SECONDS));
     const response = await fetch(`https://gateway.thegraph.com/api/subgraphs/id/${subgraphId}`, {
       method: "POST",
       headers: {
@@ -65,22 +68,31 @@ async function queryOnchainProfile(walletAddress) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        query: `query WalletOnchainProfile($wallet: Bytes!) {
+        query: `query WalletOnchainProfile($wallet: Bytes!, $cutoff: BigInt!) {
           _meta { block { number hash } deployment hasIndexingErrors }
-          positions(
-            first: 10
-            where: { owner: $wallet }
-          ) {
+          earliestMints: mints(first: 1, orderBy: timestamp, orderDirection: asc, where: { origin: $wallet }) { timestamp }
+          earliestBurns: burns(first: 1, orderBy: timestamp, orderDirection: asc, where: { origin: $wallet }) { timestamp }
+          earliestCollects: collects(first: 1, orderBy: timestamp, orderDirection: asc, where: { origin: $wallet }) { timestamp }
+          recentMints: mints(first: 100, orderBy: timestamp, orderDirection: desc, where: { origin: $wallet, timestamp_gte: $cutoff }) {
+            id timestamp amountUSD transaction { id blockNumber } pool { id } token0 { symbol } token1 { symbol }
+          }
+          recentBurns: burns(first: 100, orderBy: timestamp, orderDirection: desc, where: { origin: $wallet, timestamp_gte: $cutoff }) {
+            id timestamp amountUSD transaction { id blockNumber } pool { id } token0 { symbol } token1 { symbol }
+          }
+          recentCollects: collects(first: 100, orderBy: timestamp, orderDirection: desc, where: { origin: $wallet, timestamp_gte: $cutoff }) {
+            id timestamp amountUSD transaction { id blockNumber } pool { id token0 { symbol } token1 { symbol } }
+          }
+          positions(first: 20, where: { owner: $wallet }) {
             id
             liquidity
             amountDepositedUSD
-            transaction { id blockNumber }
+            transaction { id blockNumber timestamp }
             pool { id }
             token0 { id symbol }
             token1 { id symbol }
           }
         }`,
-        variables: { wallet: walletAddress },
+        variables: { wallet: walletAddress, cutoff },
       }),
     });
     const body = await response.json().catch(() => null);
@@ -100,25 +112,17 @@ async function queryOnchainProfile(walletAddress) {
       throw error;
     }
 
-    const positions = Array.isArray(body?.data?.positions) ? body.data.positions : [];
+    const proof = buildOnchainProof(body.data, nowSeconds);
     return {
       walletAddress,
       network: "ethereum",
       indexedBlock: Number(body?.data?._meta?.block?.number || 0),
       indexedBlockHash: safeString(body?.data?._meta?.block?.hash, 80) || null,
       hasIndexingErrors: Boolean(body?.data?._meta?.hasIndexingErrors),
-      recentActivityCount: positions.length,
-      protocols: ["Uniswap V3"],
-      activities: positions.map((position) => ({
-        id: safeString(position?.id, 180),
-        transactionHash: safeString(position?.transaction?.id, 80),
-        blockNumber: Number(position?.transaction?.blockNumber || 0),
-        timestamp: 0,
-        amountUSD: safeString(position?.amountDepositedUSD, 60) || null,
-        poolAddress: safeString(position?.pool?.id, 80),
-        token0: safeString(position?.token0?.symbol, 32) || "Token 0",
-        token1: safeString(position?.token1?.symbol, 32) || "Token 1",
-      })),
+      recentActivityCount: proof.recentTransactionCount,
+      protocols: proof.verifiedProtocols,
+      activities: proof.activities,
+      proof,
       source: {
         provider: "The Graph decentralized network",
         subgraph: "Uniswap V3 Mainnet",

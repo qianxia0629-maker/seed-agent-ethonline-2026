@@ -42,3 +42,11 @@ This log separates work completed during the event from the frozen pre-event pro
 - Vite production build.
 - `git diff --check` before commit.
 - Live gateway verification requires a participant-owned The Graph API key and is performed after the key is added to the cloud-function environment.
+
+### Deployment status
+
+- Applied and verified the PostgreSQL wallet/ENS migration in the production CloudBase environment.
+- Deployed the updated `seedclub-ai-search` function on the existing Node.js 20 runtime using merged configuration so existing environment variables were preserved.
+- Deployed the production frontend to CloudBase static hosting with a pre-release backup and remote-file verification.
+- Verified the served JavaScript bundle contains the Web3 Identity interface and `onchain_profile` action.
+- Added `scripts/fixtures/day2-onchain-query.json` as a reproducible cloud-function input. Direct CLI invocation correctly remained behind the app's existing login requirement; the final end-to-end query is therefore run through the deployed website session.

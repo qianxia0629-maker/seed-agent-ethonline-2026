@@ -7,6 +7,7 @@ const PROFILE_DAILY_LIMIT = 20;
 const PROFILE_DRAFT_DAILY_LIMIT = 10;
 const TRANSLATION_DAILY_LIMIT = 30;
 const DEFAULT_MODEL = "deepseek-v4-flash";
+const DEFAULT_GRAPH_SUBGRAPH_ID = "HUZDsRpEVP2AvzDCyzDHtdc64dyDxx8FQjzsmqSg4H3B";
 const ENV_ID = "seedclub-talent-a-d7d88i40a622d9";
 const ADMIN_UID = "2094762302839332865";
 
@@ -26,6 +27,108 @@ function safeString(value, maxLength = 80) {
 function safeList(value, maxItems = 8) {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.map((item) => safeString(item, 40)).filter(Boolean))].slice(0, maxItems);
+}
+
+function normalizeWalletAddress(value) {
+  const address = safeString(value, 42);
+  if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    const error = new Error("INVALID_WALLET_ADDRESS");
+    error.code = "INVALID_WALLET_ADDRESS";
+    throw error;
+  }
+  return address.toLowerCase();
+}
+
+async function queryOnchainProfile(walletAddress) {
+  const apiKey = process.env.THE_GRAPH_API_KEY || process.env.GRAPH_API_KEY;
+  if (!apiKey) {
+    const error = new Error("THE_GRAPH_NOT_CONFIGURED");
+    error.code = "THE_GRAPH_NOT_CONFIGURED";
+    throw error;
+  }
+
+  const subgraphId = safeString(process.env.THE_GRAPH_SUBGRAPH_ID, 80) || DEFAULT_GRAPH_SUBGRAPH_ID;
+  if (!/^[a-zA-Z0-9]{20,80}$/.test(subgraphId)) {
+    const error = new Error("THE_GRAPH_SUBGRAPH_INVALID");
+    error.code = "THE_GRAPH_SUBGRAPH_INVALID";
+    throw error;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(`https://gateway.thegraph.com/api/subgraphs/id/${subgraphId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        query: `query WalletOnchainProfile($wallet: Bytes!) {
+          _meta { block { number hash } deployment hasIndexingErrors }
+          swaps(
+            first: 10
+            orderBy: timestamp
+            orderDirection: desc
+            where: { origin: $wallet }
+          ) {
+            id
+            timestamp
+            amountUSD
+            transaction { id blockNumber }
+            pool { id }
+            token0 { id symbol }
+            token1 { id symbol }
+          }
+        }`,
+        variables: { wallet: walletAddress },
+      }),
+    });
+    const body = await response.json().catch(() => null);
+    if (!response.ok || body?.errors?.length) {
+      const error = new Error(body?.errors?.[0]?.message || `The Graph API ${response.status}`);
+      error.code = response.status === 401 || response.status === 403
+        ? "THE_GRAPH_AUTH_FAILED"
+        : "THE_GRAPH_QUERY_FAILED";
+      throw error;
+    }
+    if (!Number(body?.data?._meta?.block?.number)) {
+      const error = new Error("The Graph response did not include indexed block metadata");
+      error.code = "THE_GRAPH_QUERY_FAILED";
+      throw error;
+    }
+
+    const swaps = Array.isArray(body?.data?.swaps) ? body.data.swaps : [];
+    return {
+      walletAddress,
+      network: "ethereum",
+      indexedBlock: Number(body?.data?._meta?.block?.number || 0),
+      indexedBlockHash: safeString(body?.data?._meta?.block?.hash, 80) || null,
+      hasIndexingErrors: Boolean(body?.data?._meta?.hasIndexingErrors),
+      recentActivityCount: swaps.length,
+      protocols: swaps.length ? ["Uniswap V3"] : [],
+      activities: swaps.map((swap) => ({
+        id: safeString(swap?.id, 180),
+        transactionHash: safeString(swap?.transaction?.id, 80),
+        blockNumber: Number(swap?.transaction?.blockNumber || 0),
+        timestamp: Number(swap?.timestamp || 0),
+        amountUSD: safeString(swap?.amountUSD, 60) || null,
+        poolAddress: safeString(swap?.pool?.id, 80),
+        token0: safeString(swap?.token0?.symbol, 32) || "Token 0",
+        token1: safeString(swap?.token1?.symbol, 32) || "Token 1",
+      })),
+      source: {
+        provider: "The Graph decentralized network",
+        subgraph: "Substreams Uniswap v3 Ethereum",
+        subgraphId,
+        queriedAt: new Date().toISOString(),
+        live: true,
+      },
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function sanitizeIntent(raw) {
@@ -487,6 +590,12 @@ exports.main = async (event) => {
       return { success: true, ...profile, remaining: profileDraftQuota.remaining };
     }
 
+    if (event?.action === "onchain_profile") {
+      const walletAddress = normalizeWalletAddress(event?.walletAddress);
+      const profile = await queryOnchainProfile(walletAddress);
+      return { success: true, profile };
+    }
+
     if (event?.action === "translate_content") {
       if (uid !== ADMIN_UID) {
         if (isAnonymous) {
@@ -573,7 +682,10 @@ exports.main = async (event) => {
       code: error?.code,
       message: error?.message,
     });
-    const code = error?.code || (error?.name === "AbortError" ? "AI_TIMEOUT" : "AI_SEARCH_FAILED");
+    const isOnchainRequest = event?.action === "onchain_profile";
+    const code = error?.code || (error?.name === "AbortError"
+      ? (isOnchainRequest ? "THE_GRAPH_TIMEOUT" : "AI_TIMEOUT")
+      : (isOnchainRequest ? "THE_GRAPH_QUERY_FAILED" : "AI_SEARCH_FAILED"));
     const publicMessages = {
       DEEPSEEK_NOT_CONFIGURED: "AI 服务还没有完成密钥配置，请联系管理员。",
       DEEPSEEK_API_ERROR: "AI 服务暂时没有响应，请稍后重试。",
@@ -588,11 +700,19 @@ exports.main = async (event) => {
       PROFILE_DRAFT_LIMIT_REACHED: "今天的 AI 资料卡生成次数已经用完，请明天再试。",
       TRANSLATION_LIMIT_REACHED: "今天的自动翻译次数已经用完，内容仍可按原文发布。",
       TRANSLATION_CONTENT_REQUIRED: "请输入需要翻译的内容。",
+      INVALID_WALLET_ADDRESS: "请输入有效的 0x 钱包地址。",
+      THE_GRAPH_NOT_CONFIGURED: "链上查询尚未完成 The Graph 密钥配置。",
+      THE_GRAPH_SUBGRAPH_INVALID: "The Graph 数据源配置无效。",
+      THE_GRAPH_AUTH_FAILED: "The Graph 密钥无效或没有查询权限。",
+      THE_GRAPH_QUERY_FAILED: "The Graph 暂时无法返回链上数据，请稍后重试。",
+      THE_GRAPH_TIMEOUT: "The Graph 查询超时，请稍后重试。",
     };
     return {
       success: false,
       code,
-      message: publicMessages[code] || "AI 搜索暂时不可用，请稍后重试。",
+      message: publicMessages[code] || (isOnchainRequest
+        ? "链上查询暂时不可用，请稍后重试。"
+        : "AI 搜索暂时不可用，请稍后重试。"),
     };
   }
 };

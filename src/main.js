@@ -1,6 +1,13 @@
 import cloudbase from "@cloudbase/js-sdk";
 import "./style.css";
 import { normalize, rankMembers, searchableText } from "./matching.js";
+import {
+  explorerAddressUrl,
+  explorerTransactionUrl,
+  isEvmAddress,
+  normalizeEvmAddress,
+  shortenEvmAddress,
+} from "./wallet.js";
 
 const ENV_ID = "seedclub-talent-a-d7d88i40a622d9";
 const ADMIN_UID = "2094762302839332865";
@@ -39,6 +46,31 @@ const messages = {
     aiSkillsBatchDone: "已整理 {success} 位成员的技能",
     aiSkillsBatchPartial: "已整理 {success} 位，{failed} 位失败",
     aiSkillsFallbackSaved: "资料已保存；AI 技能暂未提炼，可由管理员稍后重试",
+    web3Identity: "WEB3 IDENTITY",
+    web3IdentityEditor: "Web3 身份",
+    web3IdentityHint: "连接或填写公开钱包地址，用于读取真实链上活动。连接钱包不会发起交易。",
+    fieldWallet: "钱包地址",
+    fieldWalletPlaceholder: "0x…",
+    fieldEns: "ENS（选填）",
+    fieldEnsPlaceholder: "例如：ray.eth",
+    connectWallet: "连接钱包",
+    walletConnecting: "正在连接…",
+    walletConnected: "钱包已连接；保存资料卡后公开展示。",
+    walletValid: "钱包地址格式正确；保存资料卡后公开展示。",
+    walletProviderMissing: "没有检测到浏览器钱包，也可以直接粘贴 0x 地址。",
+    walletRequestRejected: "钱包连接没有完成，请在钱包中允许连接后重试。",
+    walletInvalid: "请输入完整有效的 0x 钱包地址。",
+    walletPublicNote: "钱包地址和 ENS 会公开显示；当前连接仅关联地址，不代表已完成签名验证。",
+    network: "网络",
+    onchainActivity: "近期链上活动",
+    protocol: "协议",
+    verifyOnchain: "读取真实链上数据",
+    verifyingOnchain: "正在查询 The Graph…",
+    liveGraphData: "The Graph 实时数据",
+    noOnchainActivity: "查询成功；该地址最近没有 Uniswap V3 活动。",
+    recentSwapCount: "最近 {count} 笔 Uniswap V3 交互",
+    graphIndexedBlock: "索引至区块 {block}",
+    graphQueryFailed: "链上数据暂时无法读取，请检查 The Graph 配置后重试。",
     loginRegister: "登录 / 注册",
     logout: "退出登录",
     heroTitle: "创建你的 Seed Club 资料卡，让社区认识你",
@@ -323,6 +355,31 @@ const messages = {
     aiSkillsBatchDone: "Standardized skills for {success} members",
     aiSkillsBatchPartial: "Processed {success}; {failed} failed",
     aiSkillsFallbackSaved: "Profile saved. AI skill standardization can be retried later by an admin.",
+    web3Identity: "WEB3 IDENTITY",
+    web3IdentityEditor: "Web3 identity",
+    web3IdentityHint: "Connect or enter a public wallet address to read real onchain activity. Connecting never starts a transaction.",
+    fieldWallet: "Wallet address",
+    fieldWalletPlaceholder: "0x…",
+    fieldEns: "ENS (optional)",
+    fieldEnsPlaceholder: "Example: ray.eth",
+    connectWallet: "Connect wallet",
+    walletConnecting: "Connecting…",
+    walletConnected: "Wallet connected. It will be public after you save the profile.",
+    walletValid: "The wallet address is valid. It will be public after you save the profile.",
+    walletProviderMissing: "No browser wallet was detected. You can paste a 0x address instead.",
+    walletRequestRejected: "Wallet connection was not completed. Allow the connection in your wallet and try again.",
+    walletInvalid: "Enter a complete, valid 0x wallet address.",
+    walletPublicNote: "Wallet and ENS are public. This connection associates an address; ownership is not signature-verified yet.",
+    network: "Network",
+    onchainActivity: "Recent onchain activity",
+    protocol: "Protocol",
+    verifyOnchain: "Load live onchain data",
+    verifyingOnchain: "Querying The Graph…",
+    liveGraphData: "Live data from The Graph",
+    noOnchainActivity: "Live query completed. No recent Uniswap V3 activity was found for this address.",
+    recentSwapCount: "{count} recent Uniswap V3 interactions",
+    graphIndexedBlock: "Indexed through block {block}",
+    graphQueryFailed: "Onchain data could not be loaded. Check The Graph configuration and try again.",
     loginRegister: "Log in / Sign up",
     logout: "Log out",
     heroTitle: "Create your Seed Club profile and let the community discover you",
@@ -680,6 +737,9 @@ const state = {
   pendingProfileDraft: readProfileDraft(),
   awaitingProfileAuth: false,
   aiProfileGenerating: false,
+  onchainProfiles: new Map(),
+  onchainErrors: new Map(),
+  onchainLoading: new Set(),
 };
 
 const essentialFields = [
@@ -698,7 +758,12 @@ const optionalFields = [
   { key: "email", labelKey: "fieldEmail", type: "email", placeholder: "name@example.com" },
 ];
 
-const fields = [...essentialFields, ...optionalFields];
+const walletFields = [
+  { key: "wallet_address", labelKey: "fieldWallet", placeholderKey: "fieldWalletPlaceholder", maxLength: 42 },
+  { key: "ens_name", labelKey: "fieldEns", placeholderKey: "fieldEnsPlaceholder", maxLength: 255 },
+];
+
+const fields = [...essentialFields, ...walletFields, ...optionalFields];
 
 document.querySelector("#app").innerHTML = `
   <header class="topbar">
@@ -1137,9 +1202,11 @@ function renderFieldControl(field) {
   const placeholder = field.placeholderKey ? t(field.placeholderKey) : (field.placeholder || "");
   const labelAttribute = field.labelKey ? ` data-i18n="${field.labelKey}" data-required-marker="${marker}"` : "";
   const placeholderAttribute = field.placeholderKey ? ` data-i18n-placeholder="${field.placeholderKey}"` : "";
+  const maxLength = field.maxLength ? ` maxlength="${field.maxLength}"` : "";
+  const inputMode = field.key === "wallet_address" ? " inputmode=\"text\" spellcheck=\"false\" autocomplete=\"off\"" : "";
   const control = field.type === "textarea"
     ? `<textarea id="field-${field.key}" name="${field.key}" rows="3" ${required} placeholder="${placeholder}"${placeholderAttribute}></textarea>`
-    : `<input id="field-${field.key}" name="${field.key}" type="${field.type || "text"}" ${required} placeholder="${placeholder}"${placeholderAttribute} />`;
+    : `<input id="field-${field.key}" name="${field.key}" type="${field.type || "text"}" ${required}${maxLength}${inputMode} placeholder="${placeholder}"${placeholderAttribute} />`;
   return `<label class="${classes}"><span${labelAttribute}>${label}${marker}</span>${control}</label>`;
 }
 
@@ -1147,6 +1214,14 @@ elements.memberFields.innerHTML = `
   <section class="profile-field-section">
     <h3 data-i18n="coreFieldsTitle">1 分钟资料卡</h3>
     <div class="form-grid">${essentialFields.map(renderFieldControl).join("")}</div>
+  </section>
+  <section class="profile-field-section wallet-editor-section">
+    <div class="wallet-editor-heading">
+      <div><h3 data-i18n="web3IdentityEditor">Web3 身份</h3><p data-i18n="web3IdentityHint">连接或填写公开钱包地址，用于读取真实链上活动。连接钱包不会发起交易。</p></div>
+      <button id="connectWalletBtn" class="button button-quiet button-small" type="button" data-i18n="connectWallet">连接钱包</button>
+    </div>
+    <div class="form-grid">${walletFields.map(renderFieldControl).join("")}</div>
+    <p id="walletEditorStatus" class="wallet-editor-status" role="status" aria-live="polite" data-i18n="walletPublicNote">钱包地址和 ENS 会公开显示；当前连接仅关联地址，不代表已完成签名验证。</p>
   </section>
   <details class="optional-profile-fields">
     <summary><span data-i18n="optionalFieldsTitle">补充更多资料（选填）</span><small data-i18n="optionalFieldsHint">地区、经历和联系方式可以稍后再填</small></summary>
@@ -1452,6 +1527,54 @@ function canEditMember(member) {
   return state.isAdmin || (state.isMember && String(member.owner_id || "") === state.currentUid);
 }
 
+function formatUsd(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "";
+  return new Intl.NumberFormat(state.locale === "zh" ? "zh-CN" : "en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: amount < 1 ? 4 : 2,
+  }).format(amount);
+}
+
+function renderWeb3Identity(member) {
+  const walletAddress = normalizeEvmAddress(member.wallet_address);
+  if (!walletAddress) return "";
+
+  const profile = state.onchainProfiles.get(walletAddress);
+  const error = state.onchainErrors.get(walletAddress);
+  const loading = state.onchainLoading.has(walletAddress);
+  const addressUrl = explorerAddressUrl(walletAddress);
+  const activities = Array.isArray(profile?.activities) ? profile.activities.slice(0, 3) : [];
+  const protocols = Array.isArray(profile?.protocols) && profile.protocols.length
+    ? profile.protocols.join(", ")
+    : "—";
+
+  return `
+    <section class="web3-identity" aria-label="${t("web3Identity")}">
+      <div class="web3-identity-title"><span class="onchain-live-dot" aria-hidden="true"></span><strong>${t("web3Identity")}</strong></div>
+      <dl class="web3-identity-grid">
+        <div><dt>Wallet</dt><dd><a href="${addressUrl}" target="_blank" rel="noopener noreferrer" title="${walletAddress}">${shortenEvmAddress(walletAddress)}</a></dd></div>
+        ${member.ens_name ? `<div><dt>ENS</dt><dd>${escapeHtml(member.ens_name)}</dd></div>` : ""}
+        <div><dt>${t("network")}</dt><dd>Ethereum</dd></div>
+        ${profile ? `<div><dt>${t("onchainActivity")}</dt><dd>${t("recentSwapCount", { count: profile.recentActivityCount || 0 })}</dd></div>` : ""}
+        ${profile ? `<div><dt>${t("protocol")}</dt><dd>${escapeHtml(protocols)}</dd></div>` : ""}
+      </dl>
+      ${profile ? `
+        <div class="onchain-proof">
+          <p><strong>${t("liveGraphData")}</strong><span>${t("graphIndexedBlock", { block: Number(profile.indexedBlock || 0).toLocaleString("en-US") })}</span></p>
+          ${activities.length ? `<ul>${activities.map((activity) => {
+            const txUrl = explorerTransactionUrl(activity.transactionHash);
+            const pair = `${activity.token0 || "Token 0"} / ${activity.token1 || "Token 1"}`;
+            const amount = formatUsd(activity.amountUSD);
+            return `<li>${txUrl ? `<a href="${txUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(pair)}</a>` : escapeHtml(pair)}${amount ? `<span>${escapeHtml(amount)}</span>` : ""}</li>`;
+          }).join("")}</ul>` : `<p class="onchain-empty">${t("noOnchainActivity")}</p>`}
+        </div>` : ""}
+      ${error ? `<p class="onchain-error">${escapeHtml(error)}</p>` : ""}
+      <button class="button button-quiet button-small onchain-query" type="button" data-member-id="${escapeHtml(member.id)}" ${loading ? "disabled" : ""}>${loading ? t("verifyingOnchain") : t("verifyOnchain")}</button>
+    </section>`;
+}
+
 function renderMember(member) {
   const skills = Array.isArray(member.skills) ? member.skills : [];
   const aiSkills = Array.isArray(member.ai_skills) ? member.ai_skills : [];
@@ -1488,6 +1611,7 @@ function renderMember(member) {
         </div>` : ""}
       ${member.experience ? `<p class="experience">${escapeHtml(member.experience)}</p>` : ""}
       ${member.intro ? `<p class="intro">${escapeHtml(member.intro)}</p>` : ""}
+      ${renderWeb3Identity(member)}
       ${contacts.length ? `
         <dl class="contacts">
           ${contacts.map(([type, label, value]) => `<div><dt>${label}</dt><dd>${contactLink(type, value)}</dd></div>`).join("")}
@@ -1587,6 +1711,9 @@ function render() {
   });
   document.querySelectorAll(".delete-member").forEach((button) => {
     button.addEventListener("click", () => openDelete(button.dataset.id));
+  });
+  document.querySelectorAll(".onchain-query").forEach((button) => {
+    button.addEventListener("click", () => queryMemberOnchain(button.dataset.memberId));
   });
 }
 
@@ -2203,7 +2330,84 @@ function formPayload(form) {
     const value = String(formData.get(field.key) || "").trim();
     payload[field.key] = value || null;
   });
+  if (payload.wallet_address) payload.wallet_address = normalizeEvmAddress(payload.wallet_address);
+  if (payload.ens_name) payload.ens_name = payload.ens_name.toLowerCase();
   return payload;
+}
+
+function validateWalletField() {
+  const input = elements.memberForm.elements.wallet_address;
+  const value = String(input?.value || "").trim();
+  const valid = !value || isEvmAddress(value);
+  if (input) {
+    input.setCustomValidity(valid ? "" : t("walletInvalid"));
+    input.setAttribute("aria-invalid", String(!valid));
+  }
+  return valid;
+}
+
+async function connectProfileWallet() {
+  const button = document.querySelector("#connectWalletBtn");
+  const status = document.querySelector("#walletEditorStatus");
+  const input = elements.memberForm.elements.wallet_address;
+  if (!button || !status || !input) return;
+  if (!window.ethereum?.request) {
+    status.textContent = t("walletProviderMissing");
+    status.className = "wallet-editor-status error";
+    input.focus();
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = t("walletConnecting");
+  status.textContent = "";
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const address = normalizeEvmAddress(accounts?.[0]);
+    if (!address) throw new Error("INVALID_WALLET_ADDRESS");
+    input.value = address;
+    validateWalletField();
+    state.editorDirty = true;
+    status.textContent = t("walletConnected");
+    status.className = "wallet-editor-status success";
+  } catch (error) {
+    console.error("wallet connection failed", error);
+    status.textContent = t("walletRequestRejected");
+    status.className = "wallet-editor-status error";
+  } finally {
+    button.disabled = false;
+    button.textContent = t("connectWallet");
+  }
+}
+
+async function queryMemberOnchain(memberId) {
+  const member = findMember(memberId);
+  const walletAddress = normalizeEvmAddress(member?.wallet_address);
+  if (!member || !walletAddress || state.onchainLoading.has(walletAddress)) return;
+
+  state.onchainLoading.add(walletAddress);
+  state.onchainErrors.delete(walletAddress);
+  render();
+  try {
+    const response = await app.callFunction({
+      name: "seedclub-ai-search",
+      data: { action: "onchain_profile", walletAddress },
+    });
+    let result = response?.result ?? response;
+    if (typeof result === "string") result = JSON.parse(result);
+    if (!result?.success || !result?.profile?.source?.live) {
+      const error = new Error(result?.message || result?.code || "THE_GRAPH_QUERY_FAILED");
+      error.code = result?.code;
+      throw error;
+    }
+    state.onchainProfiles.set(walletAddress, result.profile);
+  } catch (error) {
+    console.error("The Graph wallet query failed", error);
+    state.onchainErrors.set(walletAddress, t("graphQueryFailed"));
+  } finally {
+    state.onchainLoading.delete(walletAddress);
+    render();
+  }
 }
 
 function normalizedStringList(value, maxItems) {
@@ -2499,6 +2703,12 @@ async function saveMember(event) {
   if (state.saving) return;
   elements.memberError.textContent = "";
 
+  if (!validateWalletField()) {
+    elements.memberError.textContent = t("walletInvalid");
+    elements.memberForm.elements.wallet_address.focus();
+    return;
+  }
+
   const payload = formPayload(elements.memberForm);
   if (!payload.name || !payload.occupation || !payload.skills.length || !payload.intro) {
     elements.memberError.textContent = t("errorRequiredFields");
@@ -2721,6 +2931,17 @@ elements.messageInput.addEventListener("keydown", (event) => {
 });
 elements.memberForm.addEventListener("submit", saveMember);
 elements.profileAiGenerateBtn.addEventListener("click", generateProfileFromIntroduction);
+document.querySelector("#connectWalletBtn")?.addEventListener("click", connectProfileWallet);
+elements.memberForm.elements.wallet_address?.addEventListener("input", () => {
+  validateWalletField();
+  const status = document.querySelector("#walletEditorStatus");
+  if (status) {
+    status.textContent = isEvmAddress(elements.memberForm.elements.wallet_address.value)
+      ? t("walletValid")
+      : t("walletPublicNote");
+    status.className = "wallet-editor-status";
+  }
+});
 elements.memberForm.addEventListener("input", () => {
   state.editorDirty = true;
 });

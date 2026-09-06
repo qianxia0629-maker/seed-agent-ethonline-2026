@@ -24,6 +24,8 @@ OpenAI Codex assisted with the following hackathon changes:
 - `test/wallet.test.js` and `scripts/verify-the-graph.mjs`: automated validation and live-query verification tooling.
 - `README.md` and this disclosure: setup and transparency documentation.
 
+For Day 3, OpenAI Codex also assisted with the deterministic Onchain Proof implementation, including the multi-entity GraphQL query, activity de-duplication, score calculation, tests, bilingual proof-card interface, and methodology documentation. The participant approved the feature scope and score framing. The score itself is calculated by fixed application logic from live query results; no AI model assigns or changes it.
+
 ## Verification and limits
 
 - AI output is treated as a draft until it passes automated checks and participant acceptance.

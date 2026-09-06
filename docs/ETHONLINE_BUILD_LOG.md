@@ -53,3 +53,29 @@ This log separates work completed during the event from the frozen pre-event pro
 - Added `scripts/fixtures/day2-onchain-query.json` as a reproducible cloud-function input. Direct CLI invocation correctly remained behind the app's existing login requirement; the final end-to-end query is therefore run through the deployed website session.
 - Participant acceptance passed on the deployed website: the Web3 Identity panel returned live The Graph data through indexed Ethereum block `25917645` without a provider error.
 - The acceptance screenshot is archived at `docs/evidence/day2-the-graph-live.png`.
+
+## Day 3 — 2026-09-07
+
+### Participant-approved brief
+
+- Turn the Day 2 wallet query into a visible `Verified Onchain Activity` proof.
+- Show the first observed activity year, verified networks and protocols, 90-day activity, and a transparent `0–100` activity score.
+- Do not call it a credit score and do not imply that activity proves identity, skill, wealth, or personal value.
+- Use only live The Graph results. A wallet with no evidence must receive a visible zero result, not mock data.
+- Keep AI talent matching out of Day 3; that remains the Day 4 milestone.
+
+### Implementation decisions
+
+- Query Uniswap V3 mints, burns, fee collections, and owned positions from the indexed Ethereum Subgraph.
+- Count unique transaction hashes in the 90-day window so multiple events from one transaction are not double-counted.
+- Calculate the score with fixed code across four visible components: history, recent activity, active positions, and protocol evidence.
+- Mark Ethereum and Uniswap V3 as verified only when wallet-specific evidence exists.
+- Include the indexed block, Subgraph link, capped-result notice, and a plain-language score disclaimer in the profile card.
+- Publish the complete method and limits in `docs/ONCHAIN_PROOF_METHOD.md`.
+
+### Checks
+
+- Live GraphQL schema and empty-wallet query against the decentralized gateway.
+- Unit tests for zero evidence, transaction de-duplication, position scoring, and capped results.
+- Cloud-function JavaScript syntax check.
+- Vite production build and `git diff --check`.

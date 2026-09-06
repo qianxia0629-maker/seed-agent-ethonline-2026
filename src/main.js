@@ -67,8 +67,31 @@ const messages = {
     verifyOnchain: "读取真实链上数据",
     verifyingOnchain: "正在查询 The Graph…",
     liveGraphData: "The Graph 实时数据",
-    noOnchainActivity: "查询成功；该地址没有 Uniswap V3 流动性仓位。",
-    recentSwapCount: "{count} 个 Uniswap V3 流动性仓位",
+    verifiedOnchainActivity: "VERIFIED ONCHAIN ACTIVITY",
+    proofLiveBadge: "LIVE",
+    proofScore: "链上活跃度",
+    proofScoreValue: "{score} / 100",
+    proofScoreDisclaimer: "仅衡量已查询到的链上活动，不是信用评分，也不代表个人能力。",
+    proofActiveSince: "活跃起始",
+    proofRecentActivity: "近 90 天交易",
+    proofNetworks: "已验证网络",
+    proofProtocols: "已验证协议",
+    proofPositions: "活跃流动性仓位",
+    proofNotAvailable: "暂无证据",
+    proofNoEvidence: "The Graph 查询成功，但暂未发现该地址的 Uniswap V3 链上证据。",
+    proofBreakdown: "评分依据",
+    proofHistory: "活跃历史",
+    proofRecent: "近期活动",
+    proofPositionEvidence: "当前仓位",
+    proofProtocolEvidence: "协议证据",
+    proofPoints: "{points}/{max} 分",
+    proofRecentEvidence: "最近可验证记录",
+    proofActivityMint: "增加流动性",
+    proofActivityBurn: "移除流动性",
+    proofActivityCollect: "领取流动性",
+    proofActivityPosition: "创建仓位",
+    proofPoweredBy: "Powered by The Graph",
+    proofLimitedResult: "高频地址的近 90 天记录已按查询上限统计。",
     graphIndexedBlock: "索引至区块 {block}",
     graphQueryFailed: "链上数据暂时无法读取，请检查 The Graph 配置后重试。",
     graphNotConfigured: "云函数没有读取到 The Graph 密钥。",
@@ -380,8 +403,31 @@ const messages = {
     verifyOnchain: "Load live onchain data",
     verifyingOnchain: "Querying The Graph…",
     liveGraphData: "Live data from The Graph",
-    noOnchainActivity: "Live query completed. No Uniswap V3 liquidity positions were found for this address.",
-    recentSwapCount: "{count} Uniswap V3 liquidity positions",
+    verifiedOnchainActivity: "VERIFIED ONCHAIN ACTIVITY",
+    proofLiveBadge: "LIVE",
+    proofScore: "Onchain Activity Score",
+    proofScoreValue: "{score} / 100",
+    proofScoreDisclaimer: "Measures only the queried onchain activity. It is not a credit score or a judgment of ability.",
+    proofActiveSince: "Active since",
+    proofRecentActivity: "90-day transactions",
+    proofNetworks: "Verified networks",
+    proofProtocols: "Verified protocols",
+    proofPositions: "Active liquidity positions",
+    proofNotAvailable: "No evidence yet",
+    proofNoEvidence: "The Graph query succeeded, but no Uniswap V3 evidence was found for this address.",
+    proofBreakdown: "Score breakdown",
+    proofHistory: "Activity history",
+    proofRecent: "Recent activity",
+    proofPositionEvidence: "Current positions",
+    proofProtocolEvidence: "Protocol evidence",
+    proofPoints: "{points}/{max} pts",
+    proofRecentEvidence: "Recent verifiable records",
+    proofActivityMint: "Added liquidity",
+    proofActivityBurn: "Removed liquidity",
+    proofActivityCollect: "Collected liquidity",
+    proofActivityPosition: "Created position",
+    proofPoweredBy: "Powered by The Graph",
+    proofLimitedResult: "The 90-day count for this high-activity wallet is limited by the query cap.",
     graphIndexedBlock: "Indexed through block {block}",
     graphQueryFailed: "Onchain data could not be loaded. Check The Graph configuration and try again.",
     graphNotConfigured: "The cloud function could not read the The Graph API key.",
@@ -1545,6 +1591,22 @@ function formatUsd(value) {
   }).format(amount);
 }
 
+function formatProofDate(timestamp) {
+  const date = new Date(Number(timestamp) * 1000);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat(state.locale === "zh" ? "zh-CN" : "en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function graphSubgraphUrl(subgraphId) {
+  const id = String(subgraphId || "");
+  if (!/^[a-zA-Z0-9]{20,80}$/.test(id)) return "https://thegraph.com/explorer";
+  return `https://thegraph.com/explorer/subgraphs/${id}?view=Query&chain=arbitrum-one`;
+}
+
 function renderWeb3Identity(member) {
   const walletAddress = normalizeEvmAddress(member.wallet_address);
   if (!walletAddress) return "";
@@ -1553,10 +1615,29 @@ function renderWeb3Identity(member) {
   const error = state.onchainErrors.get(walletAddress);
   const loading = state.onchainLoading.has(walletAddress);
   const addressUrl = explorerAddressUrl(walletAddress);
-  const activities = Array.isArray(profile?.activities) ? profile.activities.slice(0, 3) : [];
-  const protocols = Array.isArray(profile?.protocols) && profile.protocols.length
-    ? profile.protocols.join(", ")
+  const proof = profile?.proof && typeof profile.proof === "object" ? profile.proof : null;
+  const activities = Array.isArray(proof?.activities) ? proof.activities.slice(0, 3) : [];
+  const breakdown = Array.isArray(proof?.breakdown) ? proof.breakdown : [];
+  const score = Math.max(0, Math.min(100, Number(proof?.score) || 0));
+  const networks = Array.isArray(proof?.verifiedNetworks) && proof.verifiedNetworks.length
+    ? proof.verifiedNetworks.join(", ")
     : "—";
+  const protocols = Array.isArray(proof?.verifiedProtocols) && proof.verifiedProtocols.length
+    ? proof.verifiedProtocols.join(", ")
+    : "—";
+  const breakdownLabels = {
+    history: "proofHistory",
+    recentActivity: "proofRecent",
+    activePositions: "proofPositionEvidence",
+    protocolEvidence: "proofProtocolEvidence",
+  };
+  const activityLabels = {
+    mint: "proofActivityMint",
+    burn: "proofActivityBurn",
+    collect: "proofActivityCollect",
+    position: "proofActivityPosition",
+  };
+  const sourceUrl = graphSubgraphUrl(profile?.source?.subgraphId);
 
   return `
     <section class="web3-identity" aria-label="${t("web3Identity")}">
@@ -1565,18 +1646,41 @@ function renderWeb3Identity(member) {
         <div><dt>Wallet</dt><dd><a href="${addressUrl}" target="_blank" rel="noopener noreferrer" title="${walletAddress}">${shortenEvmAddress(walletAddress)}</a></dd></div>
         ${member.ens_name ? `<div><dt>ENS</dt><dd>${escapeHtml(member.ens_name)}</dd></div>` : ""}
         <div><dt>${t("network")}</dt><dd>Ethereum</dd></div>
-        ${profile ? `<div><dt>${t("onchainActivity")}</dt><dd>${t("recentSwapCount", { count: profile.recentActivityCount || 0 })}</dd></div>` : ""}
-        ${profile ? `<div><dt>${t("protocol")}</dt><dd>${escapeHtml(protocols)}</dd></div>` : ""}
       </dl>
-      ${profile ? `
+      ${profile && proof ? `
         <div class="onchain-proof">
-          <p><strong>${t("liveGraphData")}</strong><span>${t("graphIndexedBlock", { block: Number(profile.indexedBlock || 0).toLocaleString("en-US") })}</span></p>
-          ${activities.length ? `<ul>${activities.map((activity) => {
+          <div class="proof-heading"><strong>${t("verifiedOnchainActivity")}</strong><span>${t("proofLiveBadge")}</span></div>
+          <div class="proof-score-shell">
+            <div class="proof-score-ring" style="--proof-score:${score * 3.6}deg" aria-label="${t("proofScoreValue", { score })}">
+              <strong>${score}</strong><span>/100</span>
+            </div>
+            <div><strong>${t("proofScore")}</strong><p>${t("proofScoreDisclaimer")}</p></div>
+          </div>
+          <dl class="proof-metrics">
+            <div><dt>${t("proofActiveSince")}</dt><dd>${proof.activeSinceYear || t("proofNotAvailable")}</dd></div>
+            <div><dt>${t("proofRecentActivity")}</dt><dd>${Number(proof.recentTransactionCount || 0)}</dd></div>
+            <div><dt>${t("proofNetworks")}</dt><dd>${escapeHtml(networks)}</dd></div>
+            <div><dt>${t("proofProtocols")}</dt><dd>${escapeHtml(protocols)}</dd></div>
+            <div><dt>${t("proofPositions")}</dt><dd>${Number(proof.activePositionCount || 0)}</dd></div>
+          </dl>
+          ${proof.hasEvidence ? `
+            <div class="proof-breakdown"><p>${t("proofBreakdown")}</p>${breakdown.map((item) => {
+              const points = Math.max(0, Number(item.points) || 0);
+              const maxPoints = Math.max(1, Number(item.maxPoints) || 1);
+              const progress = Math.min(100, Math.round((points / maxPoints) * 100));
+              return `<div class="proof-breakdown-row"><span>${t(breakdownLabels[item.key] || "proofScore")}</span><i><b style="width:${progress}%"></b></i><small>${t("proofPoints", { points, max: maxPoints })}</small></div>`;
+            }).join("")}</div>
+          ` : `<p class="onchain-empty">${t("proofNoEvidence")}</p>`}
+          ${activities.length ? `<div class="proof-activity-list"><p>${t("proofRecentEvidence")}</p><ul>${activities.map((activity) => {
             const txUrl = explorerTransactionUrl(activity.transactionHash);
             const pair = `${activity.token0 || "Token 0"} / ${activity.token1 || "Token 1"}`;
             const amount = formatUsd(activity.amountUSD);
-            return `<li>${txUrl ? `<a href="${txUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(pair)}</a>` : escapeHtml(pair)}${amount ? `<span>${escapeHtml(amount)}</span>` : ""}</li>`;
-          }).join("")}</ul>` : `<p class="onchain-empty">${t("noOnchainActivity")}</p>`}
+            const date = formatProofDate(activity.timestamp);
+            const label = t(activityLabels[activity.kind] || "proofRecentEvidence");
+            return `<li><div>${txUrl ? `<a href="${txUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(pair)}</a>` : escapeHtml(pair)}<small>${escapeHtml(label)}${date ? ` · ${escapeHtml(date)}` : ""}</small></div>${amount ? `<span>${escapeHtml(amount)}</span>` : ""}</li>`;
+          }).join("")}</ul></div>` : ""}
+          ${proof.resultCapped ? `<p class="proof-limit-note">${t("proofLimitedResult")}</p>` : ""}
+          <p class="proof-source"><a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${t("proofPoweredBy")}</a><span>${t("graphIndexedBlock", { block: Number(profile.indexedBlock || 0).toLocaleString("en-US") })}</span></p>
         </div>` : ""}
       ${error ? `<p class="onchain-error">${escapeHtml(error)}</p>` : ""}
       <button class="button button-quiet button-small onchain-query" type="button" data-member-id="${escapeHtml(member.id)}" ${loading ? "disabled" : ""}>${loading ? t("verifyingOnchain") : t("verifyOnchain")}</button>

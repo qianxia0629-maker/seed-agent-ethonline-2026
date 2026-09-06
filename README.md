@@ -1,4 +1,30 @@
-# Seed Club Talent V5.12
+# Seed Agent — ETHOnline 2026
+
+Seed Agent is being built in public during ETHOnline 2026 on top of the frozen Seed Club Talent V5.12 baseline. The pre-hackathon code is preserved at the `pre-ethonline-2026` tag and documented in `PRE_EXISTING_WORK.md`.
+
+AI-assisted development is documented transparently in `AI_USAGE.md`.
+
+## Day 2 — Wallet + Onchain Profile
+
+- Member profiles now support a public EVM wallet address and optional ENS name.
+- Users can connect a browser wallet or paste a valid `0x…` address; connecting does not initiate a transaction.
+- Wallet addresses are normalized and validated in both the browser and cloud function.
+- Member cards include a Web3 Identity panel with Ethereum, wallet/ENS and live activity.
+- `seedclub-ai-search` adds the `onchain_profile` action. It queries the decentralized The Graph gateway from the server, never from the browser.
+- The live source is the indexed `Substreams Uniswap v3 Ethereum` subgraph. Results include the indexed block and up to 10 recent swaps initiated by the wallet.
+- There is no mocked or static onchain fallback. Missing/invalid credentials and provider failures are shown as errors.
+
+### Day 2 deployment
+
+1. Run `sql/v6-wallet-and-onchain-profile.sql` in the CloudBase PostgreSQL SQL editor.
+2. Add `THE_GRAPH_API_KEY` to the `seedclub-ai-search` cloud-function environment. Do not put it in the frontend or commit it.
+3. Optional: set `THE_GRAPH_SUBGRAPH_ID`; otherwise the project uses `HUZDsRpEVP2AvzDCyzDHtdc64dyDxx8FQjzsmqSg4H3B`.
+4. Deploy the updated cloud function, then deploy the frontend.
+5. Verify a live query locally with environment variables `THE_GRAPH_API_KEY` and `GRAPH_TEST_WALLET`, then run `npm run verify:graph`. A successful response includes `live: true` and a current `indexedBlock`, even when that wallet has no recent swaps.
+
+The wallet association is intentionally described as public profile data, not cryptographic ownership proof. Signature verification belongs to a later milestone.
+
+## Pre-hackathon baseline: Seed Club Talent V5.12
 
 ## V5.12 更新
 

@@ -1,6 +1,6 @@
 const apiKey = process.env.THE_GRAPH_API_KEY || process.env.GRAPH_API_KEY;
 const subgraphId = process.env.THE_GRAPH_SUBGRAPH_ID
-  || "HUZDsRpEVP2AvzDCyzDHtdc64dyDxx8FQjzsmqSg4H3B";
+  || "9fWsevEC9Yz4WdW9QyUvu2JXsxyXAxc1X4HaEkmyyc75";
 const wallet = String(process.env.GRAPH_TEST_WALLET || "").trim().toLowerCase();
 
 if (!apiKey) throw new Error("Set THE_GRAPH_API_KEY before running the live verification.");
@@ -17,9 +17,10 @@ const response = await fetch(`https://gateway.thegraph.com/api/subgraphs/id/${su
   body: JSON.stringify({
     query: `query WalletOnchainProfile($wallet: Bytes!) {
       _meta { block { number hash } deployment hasIndexingErrors }
-      swaps(first: 3, orderBy: timestamp, orderDirection: desc, where: { origin: $wallet }) {
-        id timestamp amountUSD
+      positions(first: 3, where: { owner: $wallet }) {
+        id liquidity amountDepositedUSD
         transaction { id blockNumber }
+        pool { id }
         token0 { symbol }
         token1 { symbol }
       }
@@ -38,5 +39,5 @@ console.log(JSON.stringify({
   wallet,
   indexedBlock: body.data?._meta?.block?.number || null,
   hasIndexingErrors: body.data?._meta?.hasIndexingErrors || false,
-  recentSwaps: body.data?.swaps || [],
+  liquidityPositions: body.data?.positions || [],
 }, null, 2));

@@ -30,8 +30,8 @@ This log separates work completed during the event from the frozen pre-event pro
 
 - Store normalized lowercase EVM addresses and optional participant-supplied ENS names.
 - Keep The Graph credentials exclusively in cloud-function environment variables.
-- Query the decentralized gateway for the public `Substreams Uniswap v3 Ethereum` subgraph.
-- Return the current indexed block plus recent wallet-originated swaps so a zero-activity wallet still has verifiable live-query metadata.
+- Query the decentralized gateway for the public `Uniswap V3 Mainnet` subgraph.
+- Return the current indexed block plus wallet-owned liquidity positions so a wallet with no positions still has verifiable live-query metadata.
 - Label the wallet as an address association, not proof of ownership; signature verification remains future work.
 - Keep provider failure visible and ship no mocked fallback.
 
@@ -41,7 +41,8 @@ This log separates work completed during the event from the frozen pre-event pro
 - Cloud-function JavaScript syntax check.
 - Vite production build.
 - `git diff --check` before commit.
-- Live gateway verification requires a participant-owned The Graph API key and is performed after the key is added to the cloud-function environment.
+- Live gateway verification passed against indexed Ethereum block `25917617`; the test wallet correctly returned an empty liquidity-position list without using fallback data.
+- Replaced the original Substreams deployment after the gateway reported that it had no active indexer allocations.
 
 ### Deployment status
 

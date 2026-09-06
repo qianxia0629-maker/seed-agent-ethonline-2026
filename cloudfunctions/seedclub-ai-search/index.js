@@ -7,7 +7,7 @@ const PROFILE_DAILY_LIMIT = 20;
 const PROFILE_DRAFT_DAILY_LIMIT = 10;
 const TRANSLATION_DAILY_LIMIT = 30;
 const DEFAULT_MODEL = "deepseek-v4-flash";
-const DEFAULT_GRAPH_SUBGRAPH_ID = "HUZDsRpEVP2AvzDCyzDHtdc64dyDxx8FQjzsmqSg4H3B";
+const DEFAULT_GRAPH_SUBGRAPH_ID = "9fWsevEC9Yz4WdW9QyUvu2JXsxyXAxc1X4HaEkmyyc75";
 const ENV_ID = "seedclub-talent-a-d7d88i40a622d9";
 const ADMIN_UID = "2094762302839332865";
 
@@ -67,15 +67,13 @@ async function queryOnchainProfile(walletAddress) {
       body: JSON.stringify({
         query: `query WalletOnchainProfile($wallet: Bytes!) {
           _meta { block { number hash } deployment hasIndexingErrors }
-          swaps(
+          positions(
             first: 10
-            orderBy: timestamp
-            orderDirection: desc
-            where: { origin: $wallet }
+            where: { owner: $wallet }
           ) {
             id
-            timestamp
-            amountUSD
+            liquidity
+            amountDepositedUSD
             transaction { id blockNumber }
             pool { id }
             token0 { id symbol }
@@ -102,28 +100,28 @@ async function queryOnchainProfile(walletAddress) {
       throw error;
     }
 
-    const swaps = Array.isArray(body?.data?.swaps) ? body.data.swaps : [];
+    const positions = Array.isArray(body?.data?.positions) ? body.data.positions : [];
     return {
       walletAddress,
       network: "ethereum",
       indexedBlock: Number(body?.data?._meta?.block?.number || 0),
       indexedBlockHash: safeString(body?.data?._meta?.block?.hash, 80) || null,
       hasIndexingErrors: Boolean(body?.data?._meta?.hasIndexingErrors),
-      recentActivityCount: swaps.length,
-      protocols: swaps.length ? ["Uniswap V3"] : [],
-      activities: swaps.map((swap) => ({
-        id: safeString(swap?.id, 180),
-        transactionHash: safeString(swap?.transaction?.id, 80),
-        blockNumber: Number(swap?.transaction?.blockNumber || 0),
-        timestamp: Number(swap?.timestamp || 0),
-        amountUSD: safeString(swap?.amountUSD, 60) || null,
-        poolAddress: safeString(swap?.pool?.id, 80),
-        token0: safeString(swap?.token0?.symbol, 32) || "Token 0",
-        token1: safeString(swap?.token1?.symbol, 32) || "Token 1",
+      recentActivityCount: positions.length,
+      protocols: ["Uniswap V3"],
+      activities: positions.map((position) => ({
+        id: safeString(position?.id, 180),
+        transactionHash: safeString(position?.transaction?.id, 80),
+        blockNumber: Number(position?.transaction?.blockNumber || 0),
+        timestamp: 0,
+        amountUSD: safeString(position?.amountDepositedUSD, 60) || null,
+        poolAddress: safeString(position?.pool?.id, 80),
+        token0: safeString(position?.token0?.symbol, 32) || "Token 0",
+        token1: safeString(position?.token1?.symbol, 32) || "Token 1",
       })),
       source: {
         provider: "The Graph decentralized network",
-        subgraph: "Substreams Uniswap v3 Ethereum",
+        subgraph: "Uniswap V3 Mainnet",
         subgraphId,
         queriedAt: new Date().toISOString(),
         live: true,

@@ -79,3 +79,10 @@ This log separates work completed during the event from the frozen pre-event pro
 - Unit tests for zero evidence, transaction de-duplication, position scoring, and capped results.
 - Cloud-function JavaScript syntax check.
 - Vite production build and `git diff --check`.
+
+### Deployment and acceptance
+
+- Deployed and remotely verified the Day 3 frontend bundle on CloudBase static hosting.
+- Updated the production cloud function through the participant's CloudBase console while preserving its environment configuration.
+- Participant acceptance passed on the deployed website through indexed Ethereum block `25921064`.
+- The zero-evidence acceptance screenshot is archived at `docs/evidence/day3-onchain-proof-zero-evidence.png`.

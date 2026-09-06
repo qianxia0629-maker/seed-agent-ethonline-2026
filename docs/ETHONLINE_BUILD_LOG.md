@@ -51,3 +51,4 @@ This log separates work completed during the event from the frozen pre-event pro
 - Deployed the production frontend to CloudBase static hosting with a pre-release backup and remote-file verification.
 - Verified the served JavaScript bundle contains the Web3 Identity interface and `onchain_profile` action.
 - Added `scripts/fixtures/day2-onchain-query.json` as a reproducible cloud-function input. Direct CLI invocation correctly remained behind the app's existing login requirement; the final end-to-end query is therefore run through the deployed website session.
+- Participant acceptance passed on the deployed website: the Web3 Identity panel returned live The Graph data without a provider error.

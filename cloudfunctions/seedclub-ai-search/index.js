@@ -87,8 +87,11 @@ async function queryOnchainProfile(walletAddress) {
     });
     const body = await response.json().catch(() => null);
     if (!response.ok || body?.errors?.length) {
-      const error = new Error(body?.errors?.[0]?.message || `The Graph API ${response.status}`);
-      error.code = response.status === 401 || response.status === 403
+      const providerMessage = body?.errors?.[0]?.message || `The Graph API ${response.status}`;
+      const error = new Error(providerMessage);
+      error.code = response.status === 401
+        || response.status === 403
+        || /auth|api.?key|unauthori[sz]ed|forbidden|spending limit/i.test(providerMessage)
         ? "THE_GRAPH_AUTH_FAILED"
         : "THE_GRAPH_QUERY_FAILED";
       throw error;

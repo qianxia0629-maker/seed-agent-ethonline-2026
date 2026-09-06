@@ -71,6 +71,10 @@ const messages = {
     recentSwapCount: "最近 {count} 笔 Uniswap V3 交互",
     graphIndexedBlock: "索引至区块 {block}",
     graphQueryFailed: "链上数据暂时无法读取，请检查 The Graph 配置后重试。",
+    graphNotConfigured: "云函数没有读取到 The Graph 密钥。",
+    graphAuthFailed: "The Graph 密钥无效、受限或额度不可用。",
+    graphProviderFailed: "The Graph 已连接，但当前 Subgraph 查询失败。",
+    graphTimeout: "The Graph 查询超时，请稍后重试。",
     loginRegister: "登录 / 注册",
     logout: "退出登录",
     heroTitle: "创建你的 Seed Club 资料卡，让社区认识你",
@@ -380,6 +384,10 @@ const messages = {
     recentSwapCount: "{count} recent Uniswap V3 interactions",
     graphIndexedBlock: "Indexed through block {block}",
     graphQueryFailed: "Onchain data could not be loaded. Check The Graph configuration and try again.",
+    graphNotConfigured: "The cloud function could not read the The Graph API key.",
+    graphAuthFailed: "The Graph API key is invalid, restricted, or has no available spending limit.",
+    graphProviderFailed: "The Graph is connected, but the current Subgraph query failed.",
+    graphTimeout: "The Graph query timed out. Try again shortly.",
     loginRegister: "Log in / Sign up",
     logout: "Log out",
     heroTitle: "Create your Seed Club profile and let the community discover you",
@@ -2403,7 +2411,15 @@ async function queryMemberOnchain(memberId) {
     state.onchainProfiles.set(walletAddress, result.profile);
   } catch (error) {
     console.error("The Graph wallet query failed", error);
-    state.onchainErrors.set(walletAddress, t("graphQueryFailed"));
+    const errorMessages = {
+      THE_GRAPH_NOT_CONFIGURED: "graphNotConfigured",
+      THE_GRAPH_AUTH_FAILED: "graphAuthFailed",
+      THE_GRAPH_QUERY_FAILED: "graphProviderFailed",
+      THE_GRAPH_TIMEOUT: "graphTimeout",
+    };
+    const key = errorMessages[error?.code];
+    const message = key ? t(key) : t("graphQueryFailed");
+    state.onchainErrors.set(walletAddress, `${message} [${error?.code || "UNKNOWN"}]`);
   } finally {
     state.onchainLoading.delete(walletAddress);
     render();

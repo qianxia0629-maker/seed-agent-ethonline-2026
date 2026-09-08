@@ -4,6 +4,17 @@ Seed Agent is being built in public during ETHOnline 2026 on top of the frozen S
 
 AI-assisted development is documented transparently in `AI_USAGE.md`.
 
+## Day 4 — AI Verifiable Talent Search
+
+- Natural-language requests are parsed into bounded talent-search conditions without giving the AI model access to the complete member database.
+- Candidates are selected only from real public member profiles; the model cannot invent people.
+- Searches that ask for onchain experience automatically verify wallet-linked candidates through The Graph.
+- Each result shows a request-specific match score, profile evidence, onchain evidence state, and the indexed block when verification succeeds.
+- The final score is deterministic. For onchain requests it combines 70% profile relevance with 30% Onchain Activity Score.
+- Missing wallets, zero evidence, and provider errors stay visible and never receive mocked evidence.
+
+The flow, score, and evidence states are documented in [`docs/VERIFIABLE_TALENT_SEARCH.md`](docs/VERIFIABLE_TALENT_SEARCH.md).
+
 ## Day 3 — Verified Onchain Proof
 
 - A live wallet query now produces a deterministic `Onchain Activity Score` from `0–100`.
@@ -22,7 +33,7 @@ The complete formula and current coverage limits are documented in [`docs/ONCHAI
 - Wallet addresses are normalized and validated in both the browser and cloud function.
 - Member cards include a Web3 Identity panel with Ethereum, wallet/ENS and live activity.
 - `seedclub-ai-search` adds the `onchain_profile` action. It queries the decentralized The Graph gateway from the server, never from the browser.
-- The live source is the indexed `Uniswap V3 Mainnet` subgraph. Results include the indexed block and up to 10 liquidity positions owned by the wallet.
+- The live source is the indexed `Uniswap V3 Mainnet` subgraph. Results include the indexed block and up to 20 liquidity positions owned by the wallet.
 - There is no mocked or static onchain fallback. Missing/invalid credentials and provider failures are shown as errors.
 
 ### Day 2 deployment

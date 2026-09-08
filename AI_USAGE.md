@@ -26,6 +26,8 @@ OpenAI Codex assisted with the following hackathon changes:
 
 For Day 3, OpenAI Codex also assisted with the deterministic Onchain Proof implementation, including the multi-entity GraphQL query, activity de-duplication, score calculation, tests, bilingual proof-card interface, and methodology documentation. The participant approved the feature scope and score framing. The score itself is calculated by fixed application logic from live query results; no AI model assigns or changes it.
 
+For Day 4, OpenAI Codex assisted with the Verifiable Talent Search implementation, including the extended intent schema, automatic proof lookup, deterministic profile/onchain score composition, evidence-state interface, tests, and documentation. DeepSeek parses a natural-language request into bounded conditions. Candidate selection and final scoring remain deterministic and operate only on real member records and returned The Graph data; the model cannot invent candidates or onchain evidence.
+
 ## Verification and limits
 
 - AI output is treated as a draft until it passes automated checks and participant acceptance.

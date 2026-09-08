@@ -86,3 +86,33 @@ This log separates work completed during the event from the frozen pre-event pro
 - Updated the production cloud function through the participant's CloudBase console while preserving its environment configuration.
 - Participant acceptance passed on the deployed website through indexed Ethereum block `25921064`.
 - The zero-evidence acceptance screenshot is archived at `docs/evidence/day3-onchain-proof-zero-evidence.png`.
+
+## Day 4 — 2026-09-08
+
+### Participant-approved brief
+
+- Turn the existing member search into `AI Verifiable Talent Search`.
+- Support a request such as “Find a Solidity developer with real DeFi onchain experience.”
+- Combine real member profiles with live The Graph evidence without allowing the AI model to invent candidates or activity.
+- Show the match score, matching profile fields, onchain evidence state, and a plain-language explanation.
+
+### Implementation decisions
+
+- Extend the bounded AI intent schema with explicit onchain-evidence, network, and protocol requirements.
+- Keep candidate selection deterministic and restricted to the public member records already loaded by the application.
+- Automatically query wallet-linked matches only when the request asks for onchain evidence.
+- Calculate a request-specific score in code: 70% normalized profile relevance and 30% deterministic Onchain Activity Score for onchain requests.
+- Re-rank only from calculated profile and proof values; the AI model does not assign the score.
+- Keep missing wallets, successful zero-evidence queries, and provider failures as separate visible states.
+
+### Checks
+
+- Unit tests for onchain-intent detection, score composition, zero/missing evidence, and evidence-based re-ranking.
+- Existing wallet and Onchain Proof tests.
+- Cloud-function JavaScript syntax check.
+- Vite production build and `git diff --check`.
+
+### Deployment and acceptance
+
+- Local implementation and automated checks completed.
+- Production cloud-function and frontend deployment pending participant acceptance.

@@ -1,6 +1,7 @@
 import cloudbase from "@cloudbase/js-sdk";
 import "./style.css";
 import { normalize, rankMembers, searchableText } from "./matching.js";
+import { intentNeedsOnchain, rankVerifiableMatches } from "./verifiable-search.js";
 import {
   explorerAddressUrl,
   explorerTransactionUrl,
@@ -112,16 +113,16 @@ const messages = {
     newcomerEmpty: "还没有公开的成员资料，来成为第一位吧。",
     newcomerView: "查看资料",
     discoverLabel: "DISCOVER MEMBERS",
-    discoverTitle: "寻找可以一起做事的人",
-    discoverIntro: "使用 AI 描述需求，或按姓名、技能、职业和地区搜索。",
+    discoverTitle: "用真实证据寻找合适的人",
+    discoverIntro: "AI 理解你的需求，成员资料负责匹配，The Graph 提供可验证的链上证据。",
     aiSearchLabel: "用自然语言描述要找的人",
-    aiPlaceholder: "例如：帮我找一个既懂 AI Agent，又有交易经验的人",
+    aiPlaceholder: "例如：找一位有真实 DeFi 链上经历的 Solidity 开发者",
     aiQuota: "同一网络每天可使用 10 次 AI 搜索",
     aiQuotaRemaining: "今天还可使用 {count} 次 AI 搜索",
     aiSearch: "AI 帮我找",
     aiSearching: "正在查找…",
     aiExamplesAria: "AI 搜索示例",
-    aiTradeQuery: "找一个既懂 AI Agent，又有交易经验的人",
+    aiTradeQuery: "找一位有真实 DeFi 链上经历的 Solidity 开发者",
     aiSecurityQuery: "谁研究 Agent Security？",
     aiXianQuery: "我想找人在西安、可以聊 Web3 的成员",
     keywordDivider: "或者使用关键词精准搜索",
@@ -291,6 +292,23 @@ const messages = {
     noAiMatches: "目前的真实成员资料中还没有找到同时符合全部条件的成员。",
     aiMatchCount: "从真实成员库中找到 {count} 位同时符合全部条件的成员：",
     matchReason: "匹配原因：{reasons}",
+    verifiableSearchLabel: "AI + 可验证证据",
+    verifiableSearchNote: "匹配分只衡量当前搜索需求，不评价个人能力。链上数据来自 The Graph，AI 不会补写缺失证据。",
+    matchScore: "本次匹配分",
+    profileMatch: "资料匹配",
+    onchainMatch: "链上活跃度",
+    proofAutoChecking: "正在通过 The Graph 核验",
+    proofVerified: "已验证链上证据",
+    proofNoMatch: "未发现链上证据",
+    proofWalletMissing: "未关联公开钱包",
+    proofVerificationFailed: "链上核验失败",
+    proofPending: "等待链上核验",
+    proofNotRequested: "本次需求未要求链上证据",
+    proofEvidenceSummary: "{networks} · {protocols}",
+    proofIndexedSource: "The Graph · 索引至区块 {block}",
+    profileEvidenceOnly: "资料符合需求，但链上经历尚未得到验证。",
+    verifiedEvidenceExplanation: "资料符合需求，且 The Graph 已查询到公开链上活动。",
+    aiVerifyingMatches: "正在核验候选人的链上证据…",
     viewProfile: "查看完整资料",
     libraryFailed: "成员库连接失败",
     retry: "重新连接",
@@ -448,16 +466,16 @@ const messages = {
     newcomerEmpty: "No public member profiles yet. Be the first to join.",
     newcomerView: "View profile",
     discoverLabel: "DISCOVER MEMBERS",
-    discoverTitle: "Find people to build with",
-    discoverIntro: "Describe who you need with AI, or search by name, skill, role, and location.",
+    discoverTitle: "Find people with evidence you can verify",
+    discoverIntro: "AI interprets the request, member profiles provide the match, and The Graph supplies verifiable onchain evidence.",
     aiSearchLabel: "Describe the person you are looking for",
-    aiPlaceholder: "Example: Find someone who knows AI agents and has trading experience",
+    aiPlaceholder: "Example: Find a Solidity developer with real DeFi onchain experience",
     aiQuota: "10 AI searches per network each day",
     aiQuotaRemaining: "{count} AI searches remaining today",
     aiSearch: "Find with AI",
     aiSearching: "Searching…",
     aiExamplesAria: "AI search examples",
-    aiTradeQuery: "Find someone who knows AI agents and has trading experience",
+    aiTradeQuery: "Find a Solidity developer with real DeFi onchain experience",
     aiSecurityQuery: "Who works on Agent Security?",
     aiXianQuery: "Find a Web3 member in Xi'an",
     keywordDivider: "or search with exact keywords",
@@ -627,6 +645,23 @@ const messages = {
     noAiMatches: "No member currently matches every requested condition.",
     aiMatchCount: "Found {count} members who match every requested condition:",
     matchReason: "Why they match: {reasons}",
+    verifiableSearchLabel: "AI + VERIFIABLE EVIDENCE",
+    verifiableSearchNote: "The match score applies only to this search and does not judge ability. Onchain data comes from The Graph; AI never fills in missing evidence.",
+    matchScore: "Search match",
+    profileMatch: "Profile match",
+    onchainMatch: "Onchain activity",
+    proofAutoChecking: "Checking with The Graph",
+    proofVerified: "Verified onchain evidence",
+    proofNoMatch: "No onchain evidence found",
+    proofWalletMissing: "No public wallet linked",
+    proofVerificationFailed: "Onchain verification failed",
+    proofPending: "Waiting for verification",
+    proofNotRequested: "Onchain evidence was not required",
+    proofEvidenceSummary: "{networks} · {protocols}",
+    proofIndexedSource: "The Graph · indexed through block {block}",
+    profileEvidenceOnly: "The profile matches, but onchain experience has not been verified.",
+    verifiedEvidenceExplanation: "The profile matches and The Graph found public onchain activity.",
+    aiVerifyingMatches: "Verifying candidates with live onchain evidence…",
     viewProfile: "View full profile",
     libraryFailed: "Could not connect to the member directory",
     retry: "Reconnect",
@@ -765,6 +800,7 @@ const state = {
   registerEmail: "",
   error: "",
   aiLoading: false,
+  aiVerifying: false,
   aiError: "",
   aiQuery: "",
   aiIntent: null,
@@ -868,19 +904,19 @@ document.querySelector("#app").innerHTML = `
     <section id="memberDiscovery" class="discovery-section" aria-labelledby="discoveryTitle">
       <div class="discovery-heading">
         <p class="section-label" data-i18n="discoverLabel">DISCOVER MEMBERS</p>
-        <h2 id="discoveryTitle" data-i18n="discoverTitle">寻找可以一起做事的人</h2>
-        <p data-i18n="discoverIntro">使用 AI 描述需求，或按姓名、技能、职业和地区搜索。</p>
+        <h2 id="discoveryTitle" data-i18n="discoverTitle">用真实证据寻找合适的人</h2>
+        <p data-i18n="discoverIntro">AI 理解你的需求，成员资料负责匹配，The Graph 提供可验证的链上证据。</p>
       </div>
       <form id="aiSearchForm" class="ai-search-box">
         <label class="sr-only" for="aiSearchInput" data-i18n="aiSearchLabel">用自然语言描述要找的人</label>
-        <textarea id="aiSearchInput" rows="2" maxlength="300" placeholder="例如：帮我找一个既懂 AI Agent，又有交易经验的人" data-i18n-placeholder="aiPlaceholder"></textarea>
+        <textarea id="aiSearchInput" rows="2" maxlength="300" placeholder="例如：找一位有真实 DeFi 链上经历的 Solidity 开发者" data-i18n-placeholder="aiPlaceholder"></textarea>
         <div class="ai-search-footer">
           <span id="aiQuotaText" data-i18n="aiQuota">同一网络每天可使用 10 次 AI 搜索</span>
           <button id="aiSearchBtn" class="button button-primary" type="submit" data-i18n="aiSearch">AI 帮我找</button>
         </div>
       </form>
       <div class="ai-suggestions" aria-label="AI 搜索示例" data-i18n-aria-label="aiExamplesAria">
-        <button type="button" data-ai-search="找一个既懂 AI Agent，又有交易经验的人" data-i18n-query="aiTradeQuery">AI Agent + 交易</button>
+        <button type="button" data-ai-search="找一位有真实 DeFi 链上经历的 Solidity 开发者" data-i18n-query="aiTradeQuery">Solidity + DeFi 证明</button>
         <button type="button" data-ai-search="谁研究 Agent Security？" data-i18n-query="aiSecurityQuery">Agent Security</button>
         <button type="button" data-ai-search="我想找人在西安、可以聊 Web3 的成员" data-i18n-query="aiXianQuery">西安 + Web3</button>
       </div>
@@ -1332,6 +1368,7 @@ function applyLanguage() {
   renderMessageBoard();
   renderAnnouncement();
   renderCrowdfunding();
+  renderAiResults();
 }
 
 async function copyCrowdfundAddress() {
@@ -1517,23 +1554,71 @@ function renderAiResults() {
     return;
   }
 
+  const verifiableMatches = rankVerifiableMatches(
+    state.aiMatches,
+    state.aiIntent,
+    state.aiQuery,
+    (member) => {
+      const walletAddress = normalizeEvmAddress(member?.wallet_address);
+      return {
+        walletLinked: Boolean(walletAddress),
+        loading: walletAddress ? state.onchainLoading.has(walletAddress) : false,
+        error: walletAddress ? state.onchainErrors.get(walletAddress) : "",
+        onchainProfile: walletAddress ? state.onchainProfiles.get(walletAddress) : null,
+      };
+    },
+  );
+  const verificationLabels = {
+    verified: "proofVerified",
+    no_evidence: "proofNoMatch",
+    wallet_missing: "proofWalletMissing",
+    failed: "proofVerificationFailed",
+    loading: "proofAutoChecking",
+    pending: "proofPending",
+    not_requested: "proofNotRequested",
+  };
+
   panel.innerHTML = `
     <div class="ai-answer-head">
       <span class="ai-mark">AI</span>
-      <div><strong>${escapeHtml(summary)}</strong><p>${t("aiMatchCount", { count: state.aiMatches.length })}</p></div>
+      <div><span class="verifiable-search-label">${t("verifiableSearchLabel")}</span><strong>${escapeHtml(summary)}</strong><p>${state.aiVerifying ? t("aiVerifyingMatches") : t("aiMatchCount", { count: verifiableMatches.length })}</p></div>
     </div>
+    <p class="verifiable-search-note">${t("verifiableSearchNote")}</p>
     <div class="ai-match-list">
-      ${state.aiMatches.map(({ member, reasons }, index) => `
+      ${verifiableMatches.map((match, index) => {
+        const { member, reasons } = match;
+        const verificationLabel = t(verificationLabels[match.verificationState] || "proofPending");
+        const reasonsText = reasons.map((reason) => t(reason.key, { value: reason.value })).map(escapeHtml).join(state.locale === "zh" ? "；" : "; ");
+        const networks = match.verifiedNetworks.join(", ") || "Ethereum";
+        const protocols = match.verifiedProtocols.join(", ") || "Uniswap V3";
+        const evidenceSummary = match.verificationState === "verified"
+          ? t("proofEvidenceSummary", { networks, protocols })
+          : verificationLabel;
+        const indexedBlock = Number(match.onchainProfile?.indexedBlock || 0);
+        const explanation = match.verificationState === "verified"
+          ? t("verifiedEvidenceExplanation")
+          : (match.requiresOnchain ? t("profileEvidenceOnly") : "");
+        return `
         <article class="ai-match-card">
           <span class="rank-number">${String(index + 1).padStart(2, "0")}</span>
           <div class="ai-match-content">
-            <div class="ai-match-title"><h3>${escapeHtml(member.name)}</h3>${member.occupation ? `<span>${escapeHtml(member.occupation)}</span>` : ""}</div>
+            <div class="ai-match-score-row">
+              <div class="ai-match-title"><h3>${escapeHtml(member.name)}</h3>${member.occupation ? `<span>${escapeHtml(member.occupation)}</span>` : ""}</div>
+              <div class="talent-match-score"><strong>${match.matchScore}</strong><span>${t("matchScore")}</span></div>
+            </div>
             ${member.location ? `<p class="ai-match-location">${escapeHtml(member.location)}</p>` : ""}
-            ${reasons.length ? `<p class="match-reason">${t("matchReason", { reasons: reasons.map((reason) => t(reason.key, { value: reason.value })).map(escapeHtml).join(state.locale === "zh" ? "；" : "; ") })}</p>` : ""}
+            ${reasons.length ? `<p class="match-reason">${t("matchReason", { reasons: reasonsText })}</p>` : ""}
+            ${explanation ? `<p class="match-explanation">${escapeHtml(explanation)}</p>` : ""}
+            <div class="match-evidence-grid">
+              <div><span>${t("profileMatch")}</span><strong>${match.profileMatchScore}/100</strong><small>${reasonsText || t("profileMatch")}</small></div>
+              <div class="evidence-${match.verificationState}"><span>${t("onchainMatch")}</span><strong>${match.verificationState === "loading" ? "…" : (["verified", "no_evidence"].includes(match.verificationState) ? `${match.onchainActivityScore}/100` : "—")}</strong><small>${escapeHtml(evidenceSummary)}</small></div>
+            </div>
+            ${indexedBlock ? `<p class="match-proof-source">${t("proofIndexedSource", { block: indexedBlock.toLocaleString("en-US") })}</p>` : ""}
             ${Array.isArray(member.skills) && member.skills.length ? `<div class="skill-list">${member.skills.slice(0, 6).map((skill) => `<span>${escapeHtml(skill)}</span>`).join("")}</div>` : ""}
             <button class="text-button ai-view-member" type="button" data-member-id="${escapeHtml(member.id)}">${t("viewProfile")}</button>
           </div>
-        </article>`).join("")}
+        </article>`;
+      }).join("")}
     </div>`;
 
   panel.querySelectorAll(".ai-view-member").forEach((button) => {
@@ -2302,6 +2387,7 @@ async function handleAiSearch(event) {
   }
 
   state.aiLoading = true;
+  state.aiVerifying = false;
   state.aiError = "";
   state.aiQuery = query;
   state.aiIntent = null;
@@ -2329,11 +2415,15 @@ async function handleAiSearch(event) {
     state.aiMatches = rankMembers(state.members, state.aiIntent, query);
     state.aiRemaining = Number.isFinite(Number(payload.remaining)) ? Number(payload.remaining) : null;
     if (state.aiRemaining !== null) elements.aiQuotaText.textContent = t("aiQuotaRemaining", { count: state.aiRemaining });
+    state.aiLoading = false;
+    renderAiResults();
+    await hydrateAiMatchProofs(state.aiMatches);
   } catch (error) {
     console.error(error);
     state.aiError = friendlyError(error, t("errorAiFallback"));
   } finally {
     state.aiLoading = false;
+    state.aiVerifying = false;
     elements.aiSearchBtn.disabled = false;
     elements.aiSearchBtn.textContent = t("aiSearch");
     renderAiResults();
@@ -2492,6 +2582,35 @@ async function connectProfileWallet() {
   }
 }
 
+function onchainFailureMessage(error) {
+  const errorMessages = {
+    THE_GRAPH_NOT_CONFIGURED: "graphNotConfigured",
+    THE_GRAPH_AUTH_FAILED: "graphAuthFailed",
+    THE_GRAPH_QUERY_FAILED: "graphProviderFailed",
+    THE_GRAPH_TIMEOUT: "graphTimeout",
+  };
+  const key = errorMessages[error?.code];
+  return `${key ? t(key) : t("graphQueryFailed")} [${error?.code || "UNKNOWN"}]`;
+}
+
+async function requestMemberOnchain(member) {
+  const walletAddress = normalizeEvmAddress(member?.wallet_address);
+  if (!walletAddress) return null;
+  const response = await app.callFunction({
+    name: "seedclub-ai-search",
+    data: { action: "onchain_profile", walletAddress },
+  });
+  let result = response?.result ?? response;
+  if (typeof result === "string") result = JSON.parse(result);
+  if (!result?.success || !result?.profile?.source?.live) {
+    const error = new Error(result?.message || result?.code || "THE_GRAPH_QUERY_FAILED");
+    error.code = result?.code;
+    throw error;
+  }
+  state.onchainProfiles.set(walletAddress, result.profile);
+  return result.profile;
+}
+
 async function queryMemberOnchain(memberId) {
   const member = findMember(memberId);
   const walletAddress = normalizeEvmAddress(member?.wallet_address);
@@ -2501,33 +2620,49 @@ async function queryMemberOnchain(memberId) {
   state.onchainErrors.delete(walletAddress);
   render();
   try {
-    const response = await app.callFunction({
-      name: "seedclub-ai-search",
-      data: { action: "onchain_profile", walletAddress },
-    });
-    let result = response?.result ?? response;
-    if (typeof result === "string") result = JSON.parse(result);
-    if (!result?.success || !result?.profile?.source?.live) {
-      const error = new Error(result?.message || result?.code || "THE_GRAPH_QUERY_FAILED");
-      error.code = result?.code;
-      throw error;
-    }
-    state.onchainProfiles.set(walletAddress, result.profile);
+    await requestMemberOnchain(member);
   } catch (error) {
     console.error("The Graph wallet query failed", error);
-    const errorMessages = {
-      THE_GRAPH_NOT_CONFIGURED: "graphNotConfigured",
-      THE_GRAPH_AUTH_FAILED: "graphAuthFailed",
-      THE_GRAPH_QUERY_FAILED: "graphProviderFailed",
-      THE_GRAPH_TIMEOUT: "graphTimeout",
-    };
-    const key = errorMessages[error?.code];
-    const message = key ? t(key) : t("graphQueryFailed");
-    state.onchainErrors.set(walletAddress, `${message} [${error?.code || "UNKNOWN"}]`);
+    state.onchainErrors.set(walletAddress, onchainFailureMessage(error));
   } finally {
     state.onchainLoading.delete(walletAddress);
     render();
   }
+}
+
+async function hydrateAiMatchProofs(matches) {
+  if (!intentNeedsOnchain(state.aiIntent, state.aiQuery)) return;
+  const targets = matches
+    .map(({ member }) => member)
+    .filter((member, index, members) => {
+      const walletAddress = normalizeEvmAddress(member?.wallet_address);
+      if (!walletAddress || state.onchainProfiles.has(walletAddress) || state.onchainLoading.has(walletAddress)) return false;
+      return members.findIndex((candidate) => normalizeEvmAddress(candidate?.wallet_address) === walletAddress) === index;
+    });
+  if (!targets.length) return;
+
+  targets.forEach((member) => {
+    const walletAddress = normalizeEvmAddress(member.wallet_address);
+    state.onchainLoading.add(walletAddress);
+    state.onchainErrors.delete(walletAddress);
+  });
+  state.aiVerifying = true;
+  renderAiResults();
+
+  await Promise.all(targets.map(async (member) => {
+    const walletAddress = normalizeEvmAddress(member.wallet_address);
+    try {
+      await requestMemberOnchain(member);
+    } catch (error) {
+      console.error("The Graph talent verification failed", error);
+      state.onchainErrors.set(walletAddress, onchainFailureMessage(error));
+    } finally {
+      state.onchainLoading.delete(walletAddress);
+    }
+  }));
+
+  state.aiVerifying = false;
+  render();
 }
 
 function normalizedStringList(value, maxItems) {

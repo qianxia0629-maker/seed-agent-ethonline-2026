@@ -53,6 +53,7 @@ export function rankMembers(members, intent, originalQuery) {
 
   return members.map((member) => {
     let score = 0;
+    let maxScore = 0;
     const reasons = [];
     const memberSkills = [
       ...(Array.isArray(member.skills) ? member.skills : []),
@@ -63,6 +64,7 @@ export function rankMembers(members, intent, originalQuery) {
     const conditions = [];
 
     names.forEach((name) => {
+      maxScore += 14;
       conditions.push(() => {
         if (normalize(member.name) === normalize(name) || normalize(member.nickname) === normalize(name)) {
           score += 14;
@@ -79,6 +81,7 @@ export function rankMembers(members, intent, originalQuery) {
     });
 
     skills.forEach((skill) => {
+      maxScore += 6;
       conditions.push(() => {
         const matched = memberSkills.find((item) => includesLoose(item, skill));
         if (matched) {
@@ -96,6 +99,7 @@ export function rankMembers(members, intent, originalQuery) {
     });
 
     locations.forEach((location) => {
+      maxScore += 5;
       conditions.push(() => {
         if (!includesLoose(member.location, location)) return false;
         score += 5;
@@ -105,6 +109,7 @@ export function rankMembers(members, intent, originalQuery) {
     });
 
     occupations.forEach((occupation) => {
+      maxScore += 5;
       conditions.push(() => {
         if (!includesLoose(member.occupation, occupation)) return false;
         score += 5;
@@ -114,6 +119,7 @@ export function rankMembers(members, intent, originalQuery) {
     });
 
     experienceKeywords.forEach((keyword) => {
+      maxScore += 4;
       conditions.push(() => {
         const matched = includesLoose(member.experience, keyword)
           || includesLoose(member.intro, keyword)
@@ -126,6 +132,7 @@ export function rankMembers(members, intent, originalQuery) {
     });
 
     freeKeywords.forEach((keyword) => {
+      maxScore += 2;
       conditions.push(() => {
         if (!profileText.includes(normalize(keyword))) return false;
         score += 2;
@@ -136,6 +143,7 @@ export function rankMembers(members, intent, originalQuery) {
 
     if (!hasStructuredIntent) {
       fallbackTerms.forEach((term) => {
+        maxScore += 2;
         conditions.push(() => {
           if (!profileText.includes(term)) return false;
           score += 2;
@@ -146,7 +154,15 @@ export function rankMembers(members, intent, originalQuery) {
     }
 
     const matchesEveryCondition = conditions.length > 0 && conditions.every((condition) => condition());
-    return { member, score, reasons: reasons.slice(0, 3), matchesEveryCondition };
+    const profileMatchScore = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+    return {
+      member,
+      score,
+      maxScore,
+      profileMatchScore,
+      reasons: reasons.slice(0, 3),
+      matchesEveryCondition,
+    };
   })
     .filter((item) => item.matchesEveryCondition)
     .sort((a, b) => b.score - a.score || String(a.member.name).localeCompare(String(b.member.name), "zh-CN"))

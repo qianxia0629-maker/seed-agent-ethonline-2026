@@ -114,5 +114,8 @@ This log separates work completed during the event from the frozen pre-event pro
 
 ### Deployment and acceptance
 
-- Local implementation and automated checks completed.
-- Production cloud-function and frontend deployment pending participant acceptance.
+- Deployed the updated cloud function and frontend to the production CloudBase environment while preserving the existing secret configuration.
+- Participant acceptance passed with the request `找到 Tomo-A，并核验其真实链上活动`.
+- The result selected the real `Tomo-A` member record, displayed `100/100` profile relevance, returned a live zero-evidence Onchain Activity Score, and calculated the documented combined score of `70`.
+- The Graph response was visibly sourced through indexed Ethereum block `25929436`; the application did not infer or mock missing wallet activity.
+- The acceptance screenshot is archived at `docs/evidence/day4-verifiable-talent-search.png`.

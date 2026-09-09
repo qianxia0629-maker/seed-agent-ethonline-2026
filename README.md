@@ -4,6 +4,17 @@ Seed Agent is being built in public during ETHOnline 2026 on top of the frozen S
 
 AI-assisted development is documented transparently in `AI_USAGE.md`.
 
+## Day 5 — ENSv2 discovery (Sepolia)
+
+Resolve ENS names and subnames through the Universal Resolver, inspect the
+ENSv2 registry hierarchy and public text records, and find existing members by
+their resolved wallet address. Sepolia identity reads and Ethereum mainnet
+Uniswap V3 activity checks are explicitly separated. Mainnet ENS resolution is
+also available in the profile editor. No new cloud-function upload or SQL is needed.
+
+See [ENSv2 integration, live checks and acceptance](docs/ENSV2_INTEGRATION.md)
+and the [participant-confirmed remaining milestones](docs/REMAINING_MILESTONES.md).
+
 ## Day 4 — AI Verifiable Talent Search
 
 - Natural-language requests are parsed into bounded talent-search conditions without giving the AI model access to the complete member database.

@@ -8,10 +8,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test",
-    "verify:graph": "node scripts/verify-the-graph.mjs"
+    "verify:graph": "node scripts/verify-the-graph.mjs",
+    "verify:ens": "node scripts/verify-ens.mjs"
   },
   "dependencies": {
-    "@cloudbase/js-sdk": "3.8.2"
+    "@cloudbase/js-sdk": "3.8.2",
+    "viem": "2.56.3"
   },
   "devDependencies": {
     "vite": "6.4.3"

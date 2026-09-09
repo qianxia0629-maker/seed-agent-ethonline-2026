@@ -14,6 +14,8 @@ const ENV_ID = "seedclub-talent-a-d7d88i40a622d9";
 const ADMIN_UID = "2094762302839332865";
 const USERNAME_PATTERN = /^[a-z][a-z0-9_-]{5,24}$/;
 const PROFILE_DRAFT_STORAGE_KEY = "seedclub-profile-draft";
+let ensDiscovery;
+let ensEditorRevision = 0;
 const CROWDFUND_EVM_ADDRESS = "0xecf2930ba7d960cc598377ef25435349b0b619e0";
 const DEFAULT_CROWDFUNDING = Object.freeze({
   id: 1,
@@ -32,6 +34,11 @@ const DEFAULT_CROWDFUNDING = Object.freeze({
 
 const messages = {
   zh: {
+    resolveEns: "解析 ENS（Ethereum 主网）",
+    ensResolving: "正在解析 ENS…",
+    ensResolved: "ENS 已解析，钱包地址已填入。保存前请核对；这不代表已验证所有权。",
+    ensResolveFailed: "ENS 解析失败，请检查名称或稍后重试。",
+    ensWalletMismatch: "ENS 解析地址与已填写的钱包不同。请先核对；如需使用 ENS 地址，请清空钱包地址后重新解析。",
     homeAria: "Seed Club Talent 首页",
     switchLanguage: "Switch to English",
     adminMode: "管理员模式",
@@ -385,6 +392,11 @@ const messages = {
     fieldEmail: "邮箱",
   },
   en: {
+    resolveEns: "Resolve ENS (Ethereum mainnet)",
+    ensResolving: "Resolving ENS…",
+    ensResolved: "ENS resolved and address filled. Check before saving; ownership has not been verified.",
+    ensResolveFailed: "ENS lookup failed. Check the name or retry later.",
+    ensWalletMismatch: "The ENS address differs from the entered wallet. Check both; to use the ENS address, clear the wallet field and resolve again.",
     homeAria: "Seed Club Talent home",
     switchLanguage: "切换到中文",
     adminMode: "Admin mode",
@@ -921,6 +933,7 @@ document.querySelector("#app").innerHTML = `
         <button type="button" data-ai-search="我想找人在西安、可以聊 Web3 的成员" data-i18n-query="aiXianQuery">西安 + Web3</button>
       </div>
       <div id="aiResultPanel" class="ai-result-panel" hidden></div>
+      <section id="ensDiscovery" class="ens-discovery" aria-label="ENS discovery"></section>
 
       <div class="search-divider"><span data-i18n="keywordDivider">或者使用关键词精准搜索</span></div>
       <form id="searchForm" class="search-box" role="search">
@@ -1311,6 +1324,7 @@ elements.memberFields.innerHTML = `
       <button id="connectWalletBtn" class="button button-quiet button-small" type="button" data-i18n="connectWallet">连接钱包</button>
     </div>
     <div class="form-grid">${walletFields.map(renderFieldControl).join("")}</div>
+    <button id="resolveEnsBtn" class="button button-quiet button-small" type="button" data-i18n="resolveEns"></button>
     <p id="walletEditorStatus" class="wallet-editor-status" role="status" aria-live="polite" data-i18n="walletPublicNote">钱包地址和 ENS 会公开显示；当前连接仅关联地址，不代表已完成签名验证。</p>
   </section>
   <details class="optional-profile-fields">
@@ -1337,6 +1351,7 @@ function validateRegisterUsername() {
 }
 
 function applyLanguage() {
+  ensDiscovery?.render();
   document.documentElement.lang = state.locale === "zh" ? "zh-CN" : "en";
   document.querySelectorAll("[data-i18n]").forEach((node) => {
     const marker = node.dataset.requiredMarker || "";
@@ -1863,6 +1878,7 @@ function renderNewcomers() {
 }
 
 function render() {
+  ensDiscovery?.render();
   renderAiResults();
   renderNewcomers();
   elements.resultsSection.setAttribute("aria-busy", String(state.loading));
@@ -2492,6 +2508,11 @@ function fillMemberForm(profile, { onlyPresent = false } = {}) {
 }
 
 function openEditor(mode, id = null, draft = null) {
+  ensEditorRevision++;
+  const ensButton = document.querySelector("#resolveEnsBtn");
+  if (ensButton) { ensButton.disabled = false; ensButton.textContent = t("resolveEns"); }
+  const walletStatus = document.querySelector("#walletEditorStatus");
+  if (walletStatus) { walletStatus.textContent = t("walletPublicNote"); walletStatus.className = "wallet-editor-status"; }
   if (mode === "edit" && !state.isAdmin && !state.isMember) return;
   state.editorMode = mode;
   state.editingId = id;
@@ -2533,7 +2554,8 @@ function formPayload(form) {
     payload[field.key] = value || null;
   });
   if (payload.wallet_address) payload.wallet_address = normalizeEvmAddress(payload.wallet_address);
-  if (payload.ens_name) payload.ens_name = payload.ens_name.toLowerCase();
+  // Preserve ENSIP-15-normalized names supplied by the resolver; unverified
+  // manually entered names remain self-reported profile fields.
   return payload;
 }
 
@@ -2579,6 +2601,40 @@ async function connectProfileWallet() {
   } finally {
     button.disabled = false;
     button.textContent = t("connectWallet");
+  }
+}
+
+async function resolveProfileEns() {
+  const button = document.querySelector("#resolveEnsBtn");
+  const status = document.querySelector("#walletEditorStatus");
+  const name = elements.memberForm.elements.ens_name;
+  const wallet = elements.memberForm.elements.wallet_address;
+  const originalName = name.value, originalWallet = wallet.value;
+  const revision = ++ensEditorRevision;
+  button.disabled = true;
+  button.textContent = t("ensResolving");
+  status.textContent = "";
+  try {
+    const { resolveEnsProfile } = await import("./ens.js");
+    const profile = await resolveEnsProfile(originalName, "mainnet");
+    if (revision !== ensEditorRevision || !elements.memberDialog.open || name.value !== originalName || wallet.value !== originalWallet) return;
+    if (originalWallet.trim() && normalizeEvmAddress(originalWallet) !== profile.address) {
+      status.textContent = t("ensWalletMismatch");
+      status.className = "wallet-editor-status error";
+      return;
+    }
+    name.value = profile.name;
+    wallet.value = profile.address;
+    validateWalletField();
+    state.editorDirty = true;
+    status.textContent = t("ensResolved");
+    status.className = "wallet-editor-status success";
+  } catch (error) {
+    if (revision !== ensEditorRevision || !elements.memberDialog.open || name.value !== originalName || wallet.value !== originalWallet) return;
+    status.textContent = `${t("ensResolveFailed")} [${error.code || "ENS_PROVIDER_FAILED"}]`;
+    status.className = "wallet-editor-status error";
+  } finally {
+    if (revision === ensEditorRevision) { button.disabled = false; button.textContent = t("resolveEns"); }
   }
 }
 
@@ -3185,6 +3241,7 @@ elements.messageInput.addEventListener("keydown", (event) => {
   }
 });
 elements.memberForm.addEventListener("submit", saveMember);
+document.querySelector("#resolveEnsBtn")?.addEventListener("click", resolveProfileEns);
 elements.profileAiGenerateBtn.addEventListener("click", generateProfileFromIntroduction);
 document.querySelector("#connectWalletBtn")?.addEventListener("click", connectProfileWallet);
 elements.memberForm.elements.wallet_address?.addEventListener("input", () => {
@@ -3198,6 +3255,10 @@ elements.memberForm.elements.wallet_address?.addEventListener("input", () => {
   }
 });
 elements.memberForm.addEventListener("input", () => {
+  ensEditorRevision++;
+  const button = document.querySelector("#resolveEnsBtn");
+  button.disabled = false;
+  button.textContent = t("resolveEns");
   state.editorDirty = true;
 });
 elements.deleteForm.addEventListener("submit", deleteMember);
@@ -3218,6 +3279,22 @@ document.querySelectorAll("dialog").forEach((dialog) => {
 });
 
 applyLanguage();
+import("./ens-discovery.js").then(({ mountEnsDiscovery }) => {
+  ensDiscovery = mountEnsDiscovery(document.querySelector("#ensDiscovery"), {
+    getLocale: () => state.locale,
+    getMembers: () => state.members,
+    directoryStatus: () => state.loading ? "loading" : state.error ? "error" : "ready",
+    onMember: async (member, verify) => {
+      state.query = "";
+      elements.searchInput.value = "";
+      render();
+      document.querySelector(`.member-card[data-id="${CSS.escape(String(member.id))}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (verify) await queryMemberOnchain(member.id);
+    },
+  });
+}).catch(() => {
+  document.querySelector("#ensDiscovery").textContent = t("ensResolveFailed");
+});
 initialize();
 window.setInterval(() => {
   if (document.visibilityState === "visible" && !state.boardError && !state.boardPosting) {

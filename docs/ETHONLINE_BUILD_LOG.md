@@ -119,3 +119,48 @@ This log separates work completed during the event from the frozen pre-event pro
 - The result selected the real `Tomo-A` member record, displayed `100/100` profile relevance, returned a live zero-evidence Onchain Activity Score, and calculated the documented combined score of `70`.
 - The Graph response was visibly sourced through indexed Ethereum block `25929436`; the application did not infer or mock missing wallet activity.
 - The acceptance screenshot is archived at `docs/evidence/day4-verifiable-talent-search.png`.
+
+## Day 5 — 2026-09-09
+
+### Participant-approved brief
+
+- Ray confirmed the Day 5 milestone is ENSv2, followed by the complete product
+  flow on September 10. Remaining milestones are recorded separately.
+- Check actual ENS partner requirements and integrate the Sepolia ENSv2 testnet.
+
+### Implementation
+
+- Add a bilingual ENS discovery panel with Sepolia and separately labeled
+  Ethereum mainnet lookups using viem 2.56.3.
+- Read ENSv2 root/registry hierarchy, normalized names, addresses and public
+  text records through the canonical Universal Resolver at an observed block.
+- Match only existing public member records by exact wallet address. Members
+  can be opened and their existing mainnet activity checked explicitly.
+- Add a mainnet ENS lookup button to the profile editor, preserving a conflicting
+  existing wallet and rejecting stale responses after form changes.
+- Keep public ENS claims, resolved records, wallet ownership and activity on
+  different networks distinct. There is no invented member or evidence fallback.
+- No cloud-function or database change is required.
+
+### Verification
+
+- 16 unit tests passed; production build and whitespace checks passed.
+- Frozen dependency installation passed after explicitly configuring the existing
+  pnpm build-script allowlist (esbuild allowed, core-js-pure disabled).
+- Live Sepolia `nick.eth` resolved at block 11668031. Mainnet Universal Resolver
+  readiness test returned the documented `0x2222…2222` address.
+- Browser acceptance on the local production build resolved `nick.eth` on Sepolia
+  at block 11668065, switched English, rendered at 390px without horizontal
+  overflow, rejected an invalid name and cleared results on network changes.
+- No uncaught page errors were observed. Browser testing used a separate headless
+  session and did not modify the participant's profile or external browser.
+- The external CCIP demo name returned an HTTP gateway error; this limitation is
+  recorded in `ENSV2_INTEGRATION.md` and is not reported as a successful test.
+
+### Deployment and remaining acceptance
+
+- Code and deployment artifacts are prepared for the existing EdgeOne main branch
+  workflow. Live production deployment and participant acceptance must be verified
+  separately; local browser success is not production acceptance.
+- A participant-controlled Sepolia ENSv2 name linked to their own existing member
+  wallet remains to be prepared for the complete member-to-activity demonstration.

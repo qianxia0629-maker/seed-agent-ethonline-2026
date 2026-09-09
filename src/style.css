@@ -592,6 +592,25 @@ footer span:first-child { color: #fff; font-weight: 760; }
   footer { flex-direction: column; }
 }
 
+.ens-discovery { margin: 32px 0; padding: 26px; border: 1px solid var(--line); border-radius: 18px; background: var(--green-soft); }
+.ens-heading h3 { margin: 8px 0; font-size: 24px; }
+.ens-heading > p:last-child, .ens-note { font-size: 14px; line-height: 1.6; color: var(--muted); }
+.ens-lookup-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; margin-top: 20px; }
+.ens-lookup-form .field { min-width: 0; }
+.ens-lookup-form select { width: 100%; min-height: 48px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: white; font: inherit; }
+.ens-results { overflow-wrap: anywhere; line-height: 1.6; }
+.ens-results h4 { margin: 20px 0 8px; font-size: 22px; }
+.ens-results dd { margin: 0 0 12px; }
+.ens-results dt { font-weight: 650; }
+.ens-results details { margin: 12px 0; }
+.ens-results summary { cursor: pointer; }
+.ens-member-list { list-style: none; padding: 0; }
+.ens-member-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+@media (max-width: 760px) {
+  .ens-discovery { padding: 18px; }
+  .ens-lookup-form { grid-template-columns: 1fr; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

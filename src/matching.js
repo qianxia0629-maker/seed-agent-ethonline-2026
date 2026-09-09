@@ -6,6 +6,8 @@ export function searchableText(member) {
   return normalize([
     member.name,
     member.nickname,
+    member.ens_name,
+    member.wallet_address,
     member.occupation,
     member.location,
     ...(Array.isArray(member.skills) ? member.skills : []),
@@ -66,7 +68,7 @@ export function rankMembers(members, intent, originalQuery) {
     names.forEach((name) => {
       maxScore += 14;
       conditions.push(() => {
-        if (normalize(member.name) === normalize(name) || normalize(member.nickname) === normalize(name)) {
+        if (normalize(member.name) === normalize(name) || normalize(member.nickname) === normalize(name) || normalize(member.ens_name) === normalize(name)) {
           score += 14;
           reasons.push({ key: "nameMatch", value: name });
           return true;

@@ -30,6 +30,14 @@ For Day 4, OpenAI Codex assisted with the Verifiable Talent Search implementatio
 
 ## Verification and limits
 
+For Day 5, OpenAI Codex researched the official ENSv2 requirements and implemented
+the viem-based read integration, Sepolia registry traversal, name normalization,
+public text-record display, exact-address member discovery, mainnet profile editor
+lookup, bilingual UI, automated tests, live checks and documentation. Ray supplied
+the ENSv2 milestone and performs production acceptance. ENS addresses, records and
+hierarchies come from live contract reads; AI does not generate or verify identity.
+
+
 - AI output is treated as a draft until it passes automated checks and participant acceptance.
 - No private keys, wallet seed phrases, or API keys are committed to the repository.
 - Onchain results have no mocked fallback; provider or credential failures remain visible failures.

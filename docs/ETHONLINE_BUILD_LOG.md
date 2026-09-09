@@ -159,8 +159,14 @@ This log separates work completed during the event from the frozen pre-event pro
 
 ### Deployment and remaining acceptance
 
-- Code and deployment artifacts are prepared for the existing EdgeOne main branch
-  workflow. Live production deployment and participant acceptance must be verified
-  separately; local browser success is not production acceptance.
+- With Ray's explicit authorization, implementation commit `399de68` was pushed
+  to `main`; the existing EdgeOne workflow automatically updated
+  `https://seedclubtalent.com` to the Day 5 frontend bundle.
+- A separate browser session verified the production site: `nick.eth` resolved on
+  Sepolia at block **11668155**, English switching worked, a 390px viewport had no
+  horizontal overflow, invalid input returned `ENS_INVALID_NAME`, and changing
+  networks cleared the prior result. No uncaught page errors were observed.
+- The production ENS screenshot is archived at
+  `docs/evidence/day5-ensv2-production.png`. Participant acceptance remains separate.
 - A participant-controlled Sepolia ENSv2 name linked to their own existing member
   wallet remains to be prepared for the complete member-to-activity demonstration.

@@ -76,6 +76,13 @@ can change. Run `node scripts/verify-ens.mjs <name> sepolia` to recheck.
 
 ## Participant acceptance
 
+Production deployment was verified after authorized push `399de68` to `main`.
+The live short domain returned the Day 5 bundle, and an independent browser
+resolved `nick.eth` on Sepolia at block **11668155**. English switching, mobile
+layout, invalid-name feedback and stale-result clearing passed without uncaught
+page errors. This is agent-run production verification; Ray's acceptance remains
+to be performed using the steps below.
+
 1. Open `https://seedclubtalent.com` after the Day 5 production build succeeds.
 2. Find the ENS panel, keep **ENSv2 · Sepolia**, and resolve `nick.eth`.
 3. Check the returned address, Sepolia block and expandable registry hierarchy.

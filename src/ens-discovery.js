@@ -32,7 +32,7 @@ const labels = {
 };
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-export function mountEnsDiscovery(host, { getLocale, getMembers, directoryStatus, onMember }) {
+export function mountEnsDiscovery(host, { getLocale, getMembers, directoryStatus, onMember, onCandidate }) {
   let profile = null, error = "", busy = false, revision = 0;
   host.innerHTML = `<div class="ens-heading"><p class="section-label">ENSv2 · SEPOLIA</p><h3 data-ens="title"></h3><p data-ens="intro"></p></div>
     <form class="ens-lookup-form"><label class="field"><span data-ens="name"></span><input name="ens" placeholder="nick.eth" maxlength="255" autocomplete="off" spellcheck="false" required></label>
@@ -64,6 +64,12 @@ export function mountEnsDiscovery(host, { getLocale, getMembers, directoryStatus
       <p>${status === "loading" ? l.membersLoading : status === "error" ? l.membersFailed : members.length ? `${members.length} ${l.matches}` : l.none}</p>
       ${status === "ready" && members.length ? `<p class="ens-note">${l.addressOnly}</p><ul class="ens-member-list">${members.map((member, index) => `<li><strong>${escape(member.name)}</strong><button class="text-button" type="button" data-view="${index}">${l.view}</button><button class="text-button" type="button" data-proof="${index}">${l.proof}</button></li>`).join("")}</ul><p class="ens-note">${l.proofNote}</p>` : ""}`;
     panel.querySelectorAll("[data-view]").forEach((node) => node.addEventListener("click", () => onMember(members[Number(node.dataset.view)], false)));
+    if (onCandidate) panel.querySelectorAll("[data-view]").forEach(node => {
+      const add = document.createElement("button"); add.type = "button"; add.className = "text-button";
+      add.textContent = getLocale() === "en" ? "Add to shortlist" : "加入候选";
+      add.onclick = () => onCandidate(members[Number(node.dataset.view)], profile);
+      node.after(add);
+    });
     panel.querySelectorAll("[data-proof]").forEach((node) => node.addEventListener("click", () => onMember(members[Number(node.dataset.proof)], true)));
   };
   form.addEventListener("submit", async (event) => {

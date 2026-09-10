@@ -43,4 +43,11 @@ hierarchies come from live contract reads; AI does not generate or verify identi
 - Onchain results have no mocked fallback; provider or credential failures remain visible failures.
 - A connected address is currently a public profile association, not cryptographic proof of ownership. The interface and documentation say so explicitly.
 
+For Day 6, OpenAI Codex implemented the page-local candidate shortlist, member/AI/ENS
+selection entry points, activity checks through the existing backend, Markdown report
+export, and four additional automated tests. No contact details are exported and no
+shortlist is stored remotely. Codex exercised the local browser flow with live AI and
+Graph responses and inspected the exported report. Participant-owned ENS positive
+matching remains pending; it is not claimed as completed by these checks.
+
 This disclosure will be updated if additional AI tools or generated assets are used before submission.

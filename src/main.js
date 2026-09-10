@@ -1,5 +1,6 @@
 import cloudbase from "@cloudbase/js-sdk";
 import "./style.css";
+import { mountShortlist } from "./shortlist.js";
 import { normalize, rankMembers, searchableText } from "./matching.js";
 import { intentNeedsOnchain, rankVerifiableMatches } from "./verifiable-search.js";
 import {
@@ -15,6 +16,7 @@ const ADMIN_UID = "2094762302839332865";
 const USERNAME_PATTERN = /^[a-z][a-z0-9_-]{5,24}$/;
 const PROFILE_DRAFT_STORAGE_KEY = "seedclub-profile-draft";
 let ensDiscovery;
+let shortlist;
 let ensEditorRevision = 0;
 const CROWDFUND_EVM_ADDRESS = "0xecf2930ba7d960cc598377ef25435349b0b619e0";
 const DEFAULT_CROWDFUNDING = Object.freeze({
@@ -934,6 +936,7 @@ document.querySelector("#app").innerHTML = `
       </div>
       <div id="aiResultPanel" class="ai-result-panel" hidden></div>
       <section id="ensDiscovery" class="ens-discovery" aria-label="ENS discovery"></section>
+      <section id="shortlist" class="ens-discovery" aria-label="Candidate shortlist"></section>
 
       <div class="search-divider"><span data-i18n="keywordDivider">或者使用关键词精准搜索</span></div>
       <form id="searchForm" class="search-box" role="search">
@@ -1351,6 +1354,7 @@ function validateRegisterUsername() {
 }
 
 function applyLanguage() {
+  shortlist?.render();
   ensDiscovery?.render();
   document.documentElement.lang = state.locale === "zh" ? "zh-CN" : "en";
   document.querySelectorAll("[data-i18n]").forEach((node) => {
@@ -1637,6 +1641,14 @@ function renderAiResults() {
     </div>`;
 
   panel.querySelectorAll(".ai-view-member").forEach((button) => {
+    const add = document.createElement("button");
+    add.className = "text-button"; add.type = "button"; add.dataset.aiShortlist = button.dataset.memberId;
+    add.textContent = state.locale === "zh" ? "加入候选" : "Add to shortlist";
+    add.onclick = () => {
+      const match = verifiableMatches.find(m => String(m.member.id) === button.dataset.memberId);
+      shortlist.add(match.member, {source:"AI search", query:state.aiQuery, reasons:match.reasons.map(r => t(r.key,{value:r.value})).join("; ")});
+    };
+    button.after(add);
     button.addEventListener("click", () => {
       const card = document.querySelector(`.member-card[data-id="${CSS.escape(button.dataset.memberId)}"]`);
       if (card) {
@@ -1878,6 +1890,7 @@ function renderNewcomers() {
 }
 
 function render() {
+  shortlist?.render();
   ensDiscovery?.render();
   renderAiResults();
   renderNewcomers();
@@ -1919,6 +1932,14 @@ function render() {
   }
 
   elements.memberGrid.innerHTML = members.map(renderMember).join("");
+  elements.memberGrid.querySelectorAll(".member-card").forEach(card => {
+    const button = document.createElement("button");
+    button.className = "text-button"; button.type = "button";
+    button.dataset.shortlistMember = card.dataset.id;
+    button.textContent = state.locale === "zh" ? "加入候选" : "Add to shortlist";
+    button.onclick = () => shortlist.add(findMember(card.dataset.id));
+    card.append(button);
+  });
   document.querySelectorAll(".edit-member").forEach((button) => {
     button.addEventListener("click", () => openEditor("edit", button.dataset.id));
   });
@@ -3278,12 +3299,26 @@ document.querySelectorAll("dialog").forEach((dialog) => {
   });
 });
 
+shortlist = mountShortlist(document.querySelector("#shortlist"), {
+  getMembers: () => state.members,
+  getLocale: () => state.locale,
+  getEvidence: member => {
+    const address = normalizeEvmAddress(member.wallet_address);
+    return {profile:state.onchainProfiles.get(address), error:state.onchainErrors.get(address), loading:state.onchainLoading.has(address)};
+  },
+  onVerify: queryMemberOnchain,
+  onView: member => {
+    state.query = ""; elements.searchInput.value = ""; render();
+    document.querySelector(`.member-card[data-id="${CSS.escape(String(member.id))}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
+  },
+});
 applyLanguage();
 import("./ens-discovery.js").then(({ mountEnsDiscovery }) => {
   ensDiscovery = mountEnsDiscovery(document.querySelector("#ensDiscovery"), {
     getLocale: () => state.locale,
     getMembers: () => state.members,
     directoryStatus: () => state.loading ? "loading" : state.error ? "error" : "ready",
+    onCandidate: (member, ens) => shortlist.add(member, {source:"ENS address match", ens}),
     onMember: async (member, verify) => {
       state.query = "";
       elements.searchInput.value = "";

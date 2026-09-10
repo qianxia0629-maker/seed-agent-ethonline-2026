@@ -36,3 +36,14 @@ Participant-owned ENS demo remains an external wallet task. This increment does 
 claim that milestone has been completed on behalf of the participant.
 The live ENS-to-existing-member positive route remains pending a participant-owned
 name with a matching directory address; address matching/invalidation have unit tests.
+
+## Publication status
+
+Implementation commit 746b0fa was pushed to origin/main on September 10. The configured
+automatic production deployment was thereby triggered, but release completion could
+not be confirmed: the independent production browser reported ERR_CONNECTION_CLOSED,
+PowerShell HTTPS reported unexpected EOF, and IPv4 curl timed out. DNS resolves to
+EdgeOne Pages. GitHub combined status returned no checks, not a successful deployment.
+Do not claim production acceptance until seedclubtalent.com responds and the shortlist
+is observed there. Local live ENS lookup of nick.eth, no-member handling, invalid name
+and stale-result clearing also passed; no fixture member was added to the live database.

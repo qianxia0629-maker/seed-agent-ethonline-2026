@@ -1,8 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {candidateEvidence, candidateReport, validEnsOrigin} from '../src/shortlist.js';
+import {candidateEvidence, candidateReport, validEnsOrigin, mergeCandidateOrigin} from '../src/shortlist.js';
 const member = {id:'fixture',name:'Test <script>',wallet_address:'0x'+'1'.repeat(40),email:'private@example.test'};
 const profile = {source:{live:true},indexedBlock:123,proof:{hasEvidence:false,score:0}};
+test('adding through multiple discovery routes retains search and provenance',()=>{
+  const ai={source:'AI search',query:'Find a developer',reasons:'Skill match'};
+  const ens={source:'ENS',ens:{address:member.wallet_address,name:'example.eth'}};
+  const merged=mergeCandidateOrigin(mergeCandidateOrigin(ai,ens),ens);
+  assert.equal(merged.query,ai.query); assert.deepEqual(merged.sources,['AI search','ENS']);
+});
+test('World exports registration scope without suggesting current visitor verification',()=>{
+  const world={live:true,address:member.wallet_address,registered:true,blockNumber:'123',contract:'0xcontract'};
+  const report=candidateReport([{member,origin:{source:'World',world}}],()=>({}));
+  assert.ok(report.includes('Registration record found'));
+  assert.ok(report.includes('current visitor and wallet ownership are not verified'));
+  const changed=candidateReport([{member:{...member,wallet_address:'0x'+'2'.repeat(40)},origin:{source:'World',world}}],()=>({}));
+  assert.ok(changed.includes('World association invalidated'));
+  assert.ok(!changed.includes('Registration record found'));
+});
 test('candidate evidence distinguishes missing, pending, failed, loading and empty',()=>{
   assert.equal(candidateEvidence({}), 'wallet_missing');
   assert.equal(candidateEvidence(member), 'pending');

@@ -50,4 +50,12 @@ shortlist is stored remotely. Codex exercised the local browser flow with live A
 Graph responses and inspected the exported report. Participant-owned ENS positive
 matching remains pending; it is not claimed as completed by these checks.
 
+For the September 11 release, Codex added AgentKit Core AgentBook registration reads,
+failure-preserving adapters, World evidence export, discovery-origin merging, navigation,
+tests, a favicon, English demo text, submission drafts and release documentation. Codex
+inspected public official documentation and SDK source, ran live read-only checks and
+independent browser tests, and prepared build artifacts. No World human verification,
+agent registration, wallet signing or final submission was performed on Ray's behalf.
+The World feature is public registration evidence, not completed agent authorization.
+
 This disclosure will be updated if additional AI tools or generated assets are used before submission.

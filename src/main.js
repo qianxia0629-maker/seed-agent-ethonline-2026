@@ -17,6 +17,7 @@ const USERNAME_PATTERN = /^[a-z][a-z0-9_-]{5,24}$/;
 const PROFILE_DRAFT_STORAGE_KEY = "seedclub-profile-draft";
 let ensDiscovery;
 let shortlist;
+let agentBook;
 let ensEditorRevision = 0;
 const CROWDFUND_EVM_ADDRESS = "0xecf2930ba7d960cc598377ef25435349b0b619e0";
 const DEFAULT_CROWDFUNDING = Object.freeze({
@@ -916,6 +917,9 @@ document.querySelector("#app").innerHTML = `
     </section>
 
     <section id="memberDiscovery" class="discovery-section" aria-labelledby="discoveryTitle">
+      <nav class="workflow-nav" aria-label="Evidence workflow">
+        <a href="#aiSearchForm">01 · AI Search</a><a href="#ensDiscovery">02 · ENS</a><a href="#agentBook">03 · World</a><a href="#shortlist">04 · Report</a>
+      </nav>
       <div class="discovery-heading">
         <p class="section-label" data-i18n="discoverLabel">DISCOVER MEMBERS</p>
         <h2 id="discoveryTitle" data-i18n="discoverTitle">用真实证据寻找合适的人</h2>
@@ -936,6 +940,7 @@ document.querySelector("#app").innerHTML = `
       </div>
       <div id="aiResultPanel" class="ai-result-panel" hidden></div>
       <section id="ensDiscovery" class="ens-discovery" aria-label="ENS discovery"></section>
+      <section id="agentBook" class="ens-discovery" aria-label="World AgentBook"></section>
       <section id="shortlist" class="ens-discovery" aria-label="Candidate shortlist"></section>
 
       <div class="search-divider"><span data-i18n="keywordDivider">或者使用关键词精准搜索</span></div>
@@ -1354,6 +1359,7 @@ function validateRegisterUsername() {
 }
 
 function applyLanguage() {
+  agentBook?.render();
   shortlist?.render();
   ensDiscovery?.render();
   document.documentElement.lang = state.locale === "zh" ? "zh-CN" : "en";
@@ -1890,6 +1896,7 @@ function renderNewcomers() {
 }
 
 function render() {
+  agentBook?.render();
   shortlist?.render();
   ensDiscovery?.render();
   renderAiResults();
@@ -3331,6 +3338,12 @@ import("./ens-discovery.js").then(({ mountEnsDiscovery }) => {
   document.querySelector("#ensDiscovery").textContent = t("ensResolveFailed");
 });
 initialize();
+import('./agentbook-ui.js').then(({mountAgentBook}) => {
+  agentBook = mountAgentBook(document.querySelector('#agentBook'), {
+    getLocale:()=>state.locale, getMembers:()=>state.members,
+    onCandidate:(member,world)=>shortlist.add(member,{source:'World AgentBook address match',world}),
+  });
+}).catch(()=>{document.querySelector('#agentBook').textContent=state.locale==='zh'?'World 模块加载失败，请刷新重试。':'World module unavailable. Please reload.';});
 window.setInterval(() => {
   if (document.visibilityState === "visible" && !state.boardError && !state.boardPosting) {
     loadBoardMessages({ silent: true });

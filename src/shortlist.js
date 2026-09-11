@@ -1,6 +1,11 @@
 const clean = (value) => String(value ?? "").replace(/[\r\n]+/g, " ").replace(/[<>`*_\[\]\\#]/g, "");
 const wallet = (value) => String(value || "").toLowerCase();
 
+export function mergeCandidateOrigin(previous = {}, next = {}) {
+  return {...previous,...next,source:[...new Set([...(previous.sources || (previous.source ? [previous.source] : [])), next.source].filter(Boolean))].join(' + '),
+    sources:[...new Set([...(previous.sources || (previous.source ? [previous.source] : [])),next.source].filter(Boolean))]};
+}
+
 export function candidateEvidence(member, evidence = {}) {
   if (!/^0x[\da-f]{40}$/i.test(member.wallet_address || "")) return "wallet_missing";
   if (evidence.loading) return "loading";
@@ -25,6 +30,9 @@ export function candidateReport(entries, getEvidence, now = new Date()) {
     const ens = validEnsOrigin(member, origin);
     if (ens) lines.push(`ENS: ${clean(ens.name)} | ${clean(ens.network)} | chain ${clean(ens.chainId)} | block ${clean(ens.blockNumber)}`, `ENS queried at: ${clean(ens.queriedAt)}`, `Universal Resolver: ${clean(ens.universalResolver)}`);
     else if (origin.ens) lines.push("ENS association invalidated: member wallet changed.");
+    if (origin.world?.live && wallet(origin.world.address) === wallet(member.wallet_address)) {
+      lines.push(`World AgentBook: ${origin.world.registered ? 'Registration record found' : 'No registration record at queried block'}`,`World Chain (480), block: ${clean(origin.world.blockNumber)}`,`AgentBook contract: ${clean(origin.world.contract)}`,`World queried at: ${clean(origin.world.queriedAt)}`, 'Registration lookup only; current visitor and wallet ownership are not verified.');
+    } else if(origin.world) lines.push('World association invalidated: member wallet changed.');
     lines.push("");
   }
   return lines.join("\n");
@@ -44,6 +52,15 @@ export function mountShortlist(host, { getMembers, getLocale, getEvidence, onVer
       ${rows.length ? rows.map(({member,origin},i) => { const status = candidateEvidence(member,getEvidence(member)); return `<article class="shortlist-row"><h4>${esc(member.name)}</h4><p>${esc(origin.query || origin.source)}</p><p>${esc(origin.reasons)}</p><p>${statuses[status]} · Ethereum / Uniswap V3</p>${validEnsOrigin(member,origin) ? `<p>ENS: ${esc(origin.ens.name)} · ${esc(origin.ens.network)}</p>` : ""}<button class="text-button" data-view="${i}">${en ? "View profile" : "查看资料"}</button><button class="text-button" data-verify="${i}" ${["wallet_missing","loading"].includes(status) ? "disabled" : ""}>${en ? "Verify activity" : "核验活动"}</button><button class="text-button" data-remove="${esc(member.id)}">${en ? "Remove" : "移除"}</button></article>`; }).join("") : `<p>${en ? "Add members from search, ENS results or the directory." : "从 AI 搜索、ENS 结果或成员卡片加入候选。"}</p>`}
       <button class="button button-quiet" data-export ${rows.length ? "" : "disabled"}>${en ? "Export candidate report (.md)" : "导出候选报告（.md）"}</button>`;
     host.querySelectorAll("[data-view]").forEach(b => b.onclick = () => onView(rows[Number(b.dataset.view)].member));
+    host.querySelectorAll('.shortlist-row').forEach((node,index)=>{
+      const {member,origin}=rows[index];
+      const world=origin.world;
+      if(world?.live && wallet(world.address)===wallet(member.wallet_address)) {
+        const note=document.createElement('p');
+        note.textContent=`World AgentBook · ${world.registered?(en?'Registration found':'发现注册记录'):(en?'No registration':'未发现注册记录')} · ${en?'Block':'区块'} ${world.blockNumber}`;
+        node.append(note);
+      }
+    });
     host.querySelectorAll("[data-verify]").forEach(b => b.onclick = () => onVerify(rows[Number(b.dataset.verify)].member.id));
     host.querySelectorAll("[data-remove]").forEach(b => b.onclick = () => {selected.delete(b.dataset.remove); render();});
     host.querySelector("[data-export]").onclick = () => {
@@ -52,5 +69,5 @@ export function mountShortlist(host, { getMembers, getLocale, getEvidence, onVer
     };
   }
   render();
-  return { render, add(member, origin = {source:"Member directory"}) { selected.set(String(member.id), structuredClone(origin)); render(); host.scrollIntoView({behavior:"smooth",block:"start"}); } };
+  return { render, add(member, origin = {source:"Member directory"}) { if(!member)return; selected.set(String(member.id), structuredClone(mergeCandidateOrigin(selected.get(String(member.id)),origin))); render(); host.scrollIntoView({behavior:"smooth",block:"start"}); } };
 }

@@ -1,18 +1,20 @@
 {
   "name": "seed-agent-ethonline-2026",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
+    "verify:world": "node scripts/verify-world.mjs",
     "verify:graph": "node scripts/verify-the-graph.mjs",
     "verify:ens": "node scripts/verify-ens.mjs"
   },
   "dependencies": {
     "@cloudbase/js-sdk": "3.8.2",
+    "@worldcoin/agentkit-core": "0.2.1",
     "viem": "2.56.3"
   },
   "devDependencies": {

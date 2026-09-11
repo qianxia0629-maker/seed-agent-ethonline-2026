@@ -1,6 +1,13 @@
 .shortlist-row { border-top: 1px solid var(--line); padding: 18px 0; overflow-wrap: anywhere; }
 .shortlist-row .text-button { margin: 8px 18px 8px 0; }
 #shortlist { scroll-margin-top: 100px; }
+.workflow-nav { display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px; }
+.workflow-nav a { padding:10px 16px;border:1px solid var(--line);border-radius:24px;color:var(--green);text-decoration:none;background:var(--surface); }
+.agentbook-form { display:flex;align-items:end;gap:16px;text-align:left;margin:20px 0; }
+.agentbook-form .field { flex:1;min-width:0; }
+#agentBook [data-result] { overflow-wrap:anywhere;line-height:1.6; }
+#agentBook, #ensDiscovery, #aiSearchForm { scroll-margin-top:100px; }
+@media(max-width:760px){.agentbook-form{display:grid;}.workflow-nav a{font-size:13px;padding:8px 10px;}}
 :root {
   color-scheme: light;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;

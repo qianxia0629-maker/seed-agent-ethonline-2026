@@ -170,3 +170,21 @@ This log separates work completed during the event from the frozen pre-event pro
   `docs/evidence/day5-ensv2-production.png`. Participant acceptance remains separate.
 - A participant-controlled Sepolia ENSv2 name linked to their own existing member
   wallet remains to be prepared for the complete member-to-activity demonstration.
+
+## September 10–11 — Candidate workflow and release
+
+- Added page-local shortlist, live Graph refresh and Markdown export; preserved AI,
+  ENS and World selection provenance and invalidated address-mismatched observations.
+- Added official AgentKit Core 0.2.1 canonical World Chain registration lookup.
+  A block-pinned injected client preserves errors that SDK lookup otherwise hides.
+- No human identifiers, contact fields or secrets are exported. No wallet signatures
+  or World ID verification were performed for the participant.
+- 25 Node tests and production build passed. Isolated browser exercised AI → shortlist
+  → live Graph → export, ENS public reads and error states, and World → existing member
+  → Graph → report. Real negative evidence stayed negative.
+- Tested language switching and mobile width. Fixed an existing announcement close
+  button overlap found during production acceptance, with three-width click tests.
+- README, demo script, submission drafts, honest World feedback and deployable/source
+  archives prepared. No new backend deployment or SQL required for this release.
+- This does NOT complete the planned World signed-agent authorization/Sandbox milestone.
+  Participant-controlled ENS demonstration and final video/submission remain separate.

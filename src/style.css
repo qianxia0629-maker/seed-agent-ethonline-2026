@@ -496,7 +496,7 @@ footer span:first-child { color: #fff; font-weight: 760; }
 .crowdfund-notice { margin: 0 0 18px; padding: 14px 16px; border-left: 3px solid var(--accent); color: #666c67; background: rgba(255, 255, 255, .52); font-size: 13px; line-height: 1.65; }
 .crowdfund-updated { display: block; color: #8b8f8b; font-size: 12px; }
 .crowdfund-card #crowdfundEditBtn { margin-top: 16px; }
-.dialog-close { position: absolute; top: 20px; right: 20px; font-size: 21px; }
+.dialog-close { position: absolute; z-index: 2; top: 16px; right: 16px; min-width: 44px; min-height: 44px; font-size: 21px; }
 .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .dialog-header .icon-button { font-size: 21px; }
 .dialog-editor { width: min(860px, calc(100% - 28px)); }

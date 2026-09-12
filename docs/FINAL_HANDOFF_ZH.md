@@ -1,5 +1,7 @@
 # Seed Agent 1.0 — 交付与验收
 
+> 2026-09-12 冻结更新：本人 ENS 正向流程和证据详情均已验收。以下早期状态保留为历史记录；以 [FEATURE_FREEZE.md](FEATURE_FREEZE.md)、[最终录屏稿](RECORDING_FINAL_ZH_EN.md)、[提交文案](SUBMISSION_FINAL.md) 为准。
+
 ## 可以使用的产品流程
 
 成员资料 → AI / 关键词找人 → 查看资料匹配与链上证据 → 加入候选 → 核验 → 导出报告。

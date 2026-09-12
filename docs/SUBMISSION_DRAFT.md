@@ -1,5 +1,7 @@
 # Submission draft — participant review required
 
+> Superseded by [SUBMISSION_FINAL.md](SUBMISSION_FINAL.md) for the frozen release.
+
 ## Project name
 Seed Agent — Seed Club Talent
 

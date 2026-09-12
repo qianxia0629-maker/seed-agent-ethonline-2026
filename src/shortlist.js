@@ -1,4 +1,5 @@
 const clean = (value) => String(value ?? "").replace(/[\r\n]+/g, " ").replace(/[<>`*_\[\]\\#]/g, "");
+import {renderEvidenceDetails, evidenceMarkdown} from './evidence-details.js';
 const wallet = (value) => String(value || "").toLowerCase();
 
 export function mergeCandidateOrigin(previous = {}, next = {}) {
@@ -27,6 +28,7 @@ export function candidateReport(entries, getEvidence, now = new Date()) {
       lines.push(`Source: The Graph / Ethereum mainnet / Uniswap V3`, `Indexed block: ${clean(evidence.profile.indexedBlock)}`, `Activity score: ${clean(evidence.profile.proof?.score ?? 0)}/100`);
       lines.push(`Activity queried at: ${clean(evidence.profile.source.queriedAt) || "Not available"}`, `Subgraph ID: ${clean(evidence.profile.source.subgraphId) || "Not available"}`);
     }
+    if (["verified", "no_evidence"].includes(status)) lines.push(evidenceMarkdown(evidence.profile));
     const ens = validEnsOrigin(member, origin);
     if (ens) lines.push(`ENS: ${clean(ens.name)} | ${clean(ens.network)} | chain ${clean(ens.chainId)} | block ${clean(ens.blockNumber)}`, `ENS queried at: ${clean(ens.queriedAt)}`, `Universal Resolver: ${clean(ens.universalResolver)}`);
     else if (origin.ens) lines.push("ENS association invalidated: member wallet changed.");
@@ -54,6 +56,8 @@ export function mountShortlist(host, { getMembers, getLocale, getEvidence, onVer
     host.querySelectorAll("[data-view]").forEach(b => b.onclick = () => onView(rows[Number(b.dataset.view)].member));
     host.querySelectorAll('.shortlist-row').forEach((node,index)=>{
       const {member,origin}=rows[index];
+      const evidence=getEvidence(member);
+      if(['verified','no_evidence'].includes(candidateEvidence(member,evidence))) node.insertAdjacentHTML('beforeend',renderEvidenceDetails(evidence.profile,getLocale()));
       const world=origin.world;
       if(world?.live && wallet(world.address)===wallet(member.wallet_address)) {
         const note=document.createElement('p');

@@ -17,7 +17,15 @@ Find community members, inspect public onchain evidence, and export an explainab
 6. Export a Markdown report with search reasons and evidence metadata, without contact fields. Reloading clears the list. Multiple discovery routes retain their provenance.
 
 中文交付说明：[最终交付](docs/FINAL_HANDOFF_ZH.md)。
-简易英文演示稿：[Demo script](docs/DEMO_SCRIPT_ZH_EN.md)。
+最终英文演示稿：[Demo script](docs/RECORDING_FINAL_ZH_EN.md)。
+
+## Final demonstration
+
+- [Watch or download the narrated demo](docs/demo/Seed-Agent-demo-Ray-voice-1080p.mp4) — 3:27, 1080p, narrated by Ray.
+- [Actual exported candidate report](docs/demo/demo-exported-report.md).
+- [Final submission description and partner integration notes](docs/SUBMISSION_FINAL.md).
+
+The demo shows `seedclub-ray.eth` on ENSv2 Sepolia and a real, empty Uniswap V3 mainnet activity result. It does not claim wallet ownership verification or completed World human authorization. The recording uses Ray's own voice, with light audio cleanup and waiting-time edits; neither the voice nor the website operations were sped up.
 
 ## Evidence, not claims
 

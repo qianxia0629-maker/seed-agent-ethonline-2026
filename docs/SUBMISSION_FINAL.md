@@ -1,6 +1,6 @@
 # Submission copy — review before sending
 
-Supersedes SUBMISSION_DRAFT.md for the frozen submission. Replace only the real video link after recording; do not submit a placeholder.
+Supersedes SUBMISSION_DRAFT.md for the frozen submission. The narrated demo is included in this repository. Final event submission and upload requirements must still be completed in the Hacker Dashboard.
 
 ## Name
 Seed Agent — Seed Club Talent
@@ -44,7 +44,9 @@ OpenAI Codex generated and revised most implementation code, tests and supportin
 - Live: https://seedclubtalent.com/
 - Code: https://github.com/qianxia0629-maker/seed-agent-ethonline-2026
 - Frozen runtime commit: 3023feb
-- Video: NOT YET RECORDED / UPLOADED — replace before submission.
+- Video: [Ray-narrated demo, 3:27, 1080p](demo/Seed-Agent-demo-Ray-voice-1080p.mp4).
+- Direct video file: https://raw.githubusercontent.com/qianxia0629-maker/seed-agent-ethonline-2026/main/docs/demo/Seed-Agent-demo-Ray-voice-1080p.mp4
+- Actual exported report: [demo-exported-report.md](demo/demo-exported-report.md).
 
 ## Not claimed
 World is a public AgentBook lookup in the frozen product, not completed human authorization. Sandbox access/testing is incomplete; we are not selecting World for this submission. Uncommitted authorization experiments are excluded from the frozen archive. No custom contract deployment is claimed by Seed Agent; the participant's ENS registration is distinct from deploying the application itself.

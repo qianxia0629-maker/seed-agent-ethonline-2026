@@ -48,7 +48,8 @@ selection entry points, activity checks through the existing backend, Markdown r
 export, and four additional automated tests. No contact details are exported and no
 shortlist is stored remotely. Codex exercised the local browser flow with live AI and
 Graph responses and inspected the exported report. Participant-owned ENS positive
-matching remains pending; it is not claimed as completed by these checks.
+matching was subsequently completed on September 12: Ray registered seedclub-ray.eth
+on Sepolia and configured its address record, then tested the name-to-member report workflow.
 
 For the September 11 release, Codex added AgentKit Core AgentBook registration reads,
 failure-preserving adapters, World evidence export, discovery-origin merging, navigation,
@@ -57,5 +58,16 @@ inspected public official documentation and SDK source, ran live read-only check
 independent browser tests, and prepared build artifacts. No World human verification,
 agent registration, wallet signing or final submission was performed on Ray's behalf.
 The World feature is public registration evidence, not completed agent authorization.
+
+## Final demo and supporting materials
+
+Codex helped draft the English narration and submission text, recorded actual browser
+operations, and assembled the final demo. Ray recorded all five narration segments
+in his own voice. The final video uses those recordings, not synthesized speech.
+Audio post-production used FFmpeg for light click/noise reduction, loudness matching,
+and trimming silence. A local faster-whisper model was used to check paragraph order,
+not to generate speech or replace spoken words. Static waiting was trimmed or held
+to align the screen recording with narration; speech and browser operations remain
+at their original speed. The report shown is the actual exported query snapshot.
 
 This disclosure will be updated if additional AI tools or generated assets are used before submission.
